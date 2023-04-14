@@ -1,0 +1,16 @@
+# Project
+[Bb]uild/
+
+# Resources
+![Rr]es/icon.ico
+![Rr]es/readme.txt
+
+# Misc
+misc/pathto_vcvarsall.txt
+!misc/VS_config/
+
+# Visual Studio
+.vs/
+
+# compiler stuff
+*.aps
