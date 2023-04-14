@@ -16,7 +16,7 @@ set BuildDirRe=%BuildDir%release\
 set BuildDirDe=%BuildDir%debug\
 
 REM libs
-set L_AddLib=User32.lib Shell32.lib Ole32.lib opengl32.lib
+set L_AddLib=User32.lib Shell32.lib Ole32.lib opengl32.lib "%cd%\shared\vendors\glfw\lib\glfw3.lib"
 set L_AddDll=%L_RES_FilePath%
 
 REM Launcher keys
