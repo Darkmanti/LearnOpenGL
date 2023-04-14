@@ -8,6 +8,8 @@ set GameName="LearnOpenGL"
 set L_NameExe="OpenGL"
 set L_MapFile="OpenGL"
 
+set SharedFilesPath="%cd%\shared"
+
 REM setting build directory
 set BuildDir=build\
 set BuildDirRe=%BuildDir%release\
