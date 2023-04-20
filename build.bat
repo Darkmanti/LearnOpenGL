@@ -20,14 +20,14 @@ set BuildDirRe=%BuildDir%release\
 set BuildDirDe=%BuildDir%debug\
 
 REM libs
-set L_AddLib=User32.lib Shell32.lib Ole32.lib opengl32.lib "%cd%\shared\vendors\glfw\glfw3.lib"
+set L_AddLib=user32.lib gdi32.lib shell32.lib vcruntime.lib msvcrt.lib "%glfwPath%\glfw3.lib"
 set L_AddDll=%L_RES_FilePath%
 
 REM Launcher keys
 set L_ReKeys=/permissive- /nologo %IncludesPath% /FC /Oi /GR- /GL /MT /EHa /WX /W4 /Zc:wchar_t /wd4100 /wd4189 /wd4201 /O2 /Fe%L_NameExe%
 set L_DeKeys=/permissive- /nologo %IncludesPath% /FC /Oi /GR- /MTd /EHa /WX /W4 /Zc:wchar_t /wd4100 /wd4189 /wd4201 -Fm%L_MapFile% /Z7 /Od /Fe%L_NameExe%
-set L_ReLinkKeys=/link /OPT:REF /SUBSYSTEM:CONSOLE
-set L_DeLinkKeys=/link /OPT:REF /SUBSYSTEM:CONSOLE
+set L_ReLinkKeys=/link /NOLOGO /OPT:REF /SUBSYSTEM:CONSOLE /NODEFAULTLIB:LIBCMT
+set L_DeLinkKeys=/link /NOLOGO /OPT:REF /SUBSYSTEM:CONSOLE /NODEFAULTLIB:LIBCMTD
 
 REM write "/D" and without spaces write a definitions
 set L_ReDef=

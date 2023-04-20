@@ -1,7 +1,5 @@
 # LearnOpenGL
 
-## At this moment build through Visual Studio
-
 #### How to run it:
 1. Go to "misc" directory and run "search_vcvarsall.bat". Wait a minute.
 2. In the "misc" directory you must see "pathto_vcvarsall.txt".
