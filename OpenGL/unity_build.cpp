@@ -16,5 +16,5 @@
 #define Gigabytes(value) (Megabytes(value)*1024LL)
 #define Terabytes(value) (Gigabytes(value)*1024LL)
 
-#include "vendors/glad/src/glad.c"
+#include "glad.c"
 #include "main.cpp"
