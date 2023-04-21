@@ -37,7 +37,7 @@ void* Win32ReadFileToBuffer(const wchar_t* path, unsigned int* fileSize, void* h
 
 	if (fileSize != NULL)
 	{
-		*fileSize = size.QuadPart;
+		*fileSize = (unsigned int)size.QuadPart;
 	}
 
 	if (keep)
