@@ -3,8 +3,11 @@
 out vec4 result;
 
 in vec3 color;
+in vec2 texCoord;
+
+uniform sampler2D albedo;
 
 void main()
 {
-    result = vec4(color, 1.0f);
+    result = texture(albedo, texCoord);
 }

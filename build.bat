@@ -11,8 +11,9 @@ set L_MapFile="OpenGL"
 set SharedFilesPath="%cd%\shared"
 set glfwPath="%cd%\shared\vendors\glfw"
 set gladPath="%cd%\shared\vendors\glad"
+set stbPath="%cd%\shared\vendors\stb"
 
-set IncludesPath=/I%SharedFilesPath% /I%glfwPath% /I%gladPath%
+set IncludesPath=/I%SharedFilesPath% /I%glfwPath% /I%gladPath% /I%stbPath%
 
 REM setting build directory
 set BuildDir=build\
