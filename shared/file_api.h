@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Windows.h>
 
 void* Win32ReadFileToBuffer(const wchar_t* path, unsigned int* fileSize, void* handle, bool keep)
@@ -57,13 +59,8 @@ void* Win32ReadFileToBuffer(const wchar_t* path, unsigned int* fileSize, void* h
 	}
 	else
 	{
-		// Nothing
+		CloseHandle(file);
 	}
 
 	return buffer;
-}
-
-void Win32CloseFile(void* handle)
-{
-	CloseHandle(handle);
 }

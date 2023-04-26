@@ -2,8 +2,10 @@
 #include "glfw3.h"
 
 #include <stdio.h>
+#include <math.h>
 
 #include "file_api.h"
+#include "shader.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -44,9 +46,9 @@ int main()
     glViewport(0, 0, 800, 600);
 
     float vertices[] = {
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
+    -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
+     0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+     0.0f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f
     };
 
     unsigned int VBO;
@@ -60,27 +62,14 @@ int main()
 
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, NULL);
+    // Position
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)0);
     glEnableVertexAttribArray(0);
+    // Color
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
-    char* vsBufferSource = (char*)Win32ReadFileToBuffer(L"../res/shaders/vs.glsl", NULL, NULL, false);
-    char* fsBufferSource = (char*)Win32ReadFileToBuffer(L"../res/shaders/fs.glsl", NULL, NULL, false);
-
-    unsigned int vertexShader;
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vsBufferSource, NULL);
-    glCompileShader(vertexShader);
-
-    unsigned int fragmentShader;
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fsBufferSource, NULL);
-    glCompileShader(fragmentShader);
-
-    unsigned int shaderProgram;
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    Shader simpleShader((wchar_t*)L"../res/shaders/vs.glsl", (wchar_t*)L"../res/shaders/fs.glsl");
 
     while (!glfwWindowShouldClose(window))
     {
@@ -89,7 +78,8 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUseProgram(shaderProgram);
+        simpleShader.Use();
+
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
