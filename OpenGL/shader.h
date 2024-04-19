@@ -31,20 +31,20 @@ public:
         vertex = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vertex, 1, &vsShaderCode, NULL);
         glCompileShader(vertex);
-        checkCompileErrors(vertex, VertexShader);
+        CheckCompileErrors(vertex, VertexShader);
 
         // fragment Shader
         fragment = glCreateShader(GL_FRAGMENT_SHADER);
         glShaderSource(fragment, 1, &fsShaderCode, NULL);
         glCompileShader(fragment);
-        checkCompileErrors(fragment, FragmentShader);
+        CheckCompileErrors(fragment, FragmentShader);
 
         // shader Program
         ID = glCreateProgram();
         glAttachShader(ID, vertex);
         glAttachShader(ID, fragment);
         glLinkProgram(ID);
-        checkCompileErrors(ID, ProgramShader);
+        CheckCompileErrors(ID, ProgramShader);
 
         // delete the shaders as they're linked into our program now and no longer necessary
         glDeleteShader(vertex);
@@ -61,24 +61,39 @@ public:
     }
 
     // Utility uniform functions
-    void setBool(char* name, bool value)
+    void SetBool(char* name, bool value)
     {
         glUniform1i(glGetUniformLocation(ID, name), (int)value);
     }
 
-    void setInt(char* name, int value)
+    void SetBool(const char* name, bool value)
+    {
+        SetBool((char*)name, value);
+    }
+
+    void SetInt(char* name, int value)
     {
         glUniform1i(glGetUniformLocation(ID, name), value);
     }
 
-    void setFloat(char* name, float value)
+    void SetInt(const char* name, int value)
+    {
+        SetInt((char*)name, value);
+    }
+
+    void SetFloat(char* name, float value)
     {
         glUniform1f(glGetUniformLocation(ID, name), value);
     }
 
+    void SetFloat(const char* name, float value)
+    {
+        SetFloat((char*)name, value);
+    }
+
 private:
 
-    void checkCompileErrors(unsigned int shader, ShaderType type)
+    void CheckCompileErrors(unsigned int shader, ShaderType type)
     {
         int success;
         char infoLog[2048];
