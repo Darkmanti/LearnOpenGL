@@ -59,7 +59,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)shared\vendors\glfw;$(SolutionDir)shared\vendors\glad;$(SolutionDir)shared;$(SolutionDir)shared\vendors\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)shared\vendors\glfw;$(SolutionDir)shared\vendors\glad;$(SolutionDir)shared;$(SolutionDir)shared\vendors\stb;$(SolutionDir)shared\vendors\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -75,7 +75,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)shared\vendors\glfw;$(SolutionDir)shared\vendors\glad;$(SolutionDir)shared;$(SolutionDir)shared\vendors\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)shared\vendors\glfw;$(SolutionDir)shared\vendors\glad;$(SolutionDir)shared;$(SolutionDir)shared\vendors\stb;$(SolutionDir)shared\vendors\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

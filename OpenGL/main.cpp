@@ -9,6 +9,10 @@
 
 #include "stb_image.h"
 
+#include "glm.hpp"
+#include "gtc/matrix_transform.hpp"
+#include "gtc/type_ptr.hpp"
+
 const int windowWidth = 1280;
 const int windowHeight = 720;
 
@@ -139,6 +143,13 @@ int main()
         glBindTexture(GL_TEXTURE_2D, texture2);
 
         simpleShader.Use();
+
+        glm::mat4 trans = glm::mat4(1.0f);
+        trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+
+        simpleShader.SetMat4("modelMatrix", trans);
+
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);

@@ -4,6 +4,9 @@
 
 #include "file_api.h"
 
+#include "glm.hpp"
+#include "gtc/type_ptr.hpp"
+
 enum ShaderType
 {
     VertexShader = 0,
@@ -89,6 +92,16 @@ public:
     void SetFloat(const char* name, float value)
     {
         SetFloat((char*)name, value);
+    }
+
+    void SetMat4(char* name, glm::mat4 mat4)
+    {
+        glUniformMatrix4fv(glGetUniformLocation(ID, name), 1, GL_FALSE, glm::value_ptr(mat4));
+    }
+
+    void SetMat4(const char* name, glm::mat4 mat4)
+    {
+        SetMat4((char*)name, mat4);
     }
 
 private:

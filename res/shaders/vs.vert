@@ -7,9 +7,11 @@ layout (location = 2) in vec2 inTexCoord;
 out vec3 color;
 out vec2 texCoord;
 
+uniform mat4 modelMatrix;
+
 void main()
 {
-    gl_Position = vec4(inPosition, 1.0);
+    gl_Position = modelMatrix * vec4(inPosition, 1.0);
     color = inColor;
     texCoord = inTexCoord;
 }

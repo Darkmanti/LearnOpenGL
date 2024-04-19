@@ -12,8 +12,9 @@ set SharedFilesPath="%cd%\shared"
 set glfwPath="%cd%\shared\vendors\glfw"
 set gladPath="%cd%\shared\vendors\glad"
 set stbPath="%cd%\shared\vendors\stb"
+set glmPath="%cd%\shared\vendors\glm"
 
-set IncludesPath=/I%SharedFilesPath% /I%glfwPath% /I%gladPath% /I%stbPath%
+set IncludesPath=/I%SharedFilesPath% /I%glfwPath% /I%gladPath% /I%stbPath% /I%glmPath%
 
 REM setting build directory
 set BuildDir=build\
