@@ -32,6 +32,9 @@
     <ClInclude Include="shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\res\shaders\fs.frag">
@@ -40,5 +43,6 @@
     <None Include="..\res\shaders\vs.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include=".editorconfig" />
   </ItemGroup>
 </Project>
