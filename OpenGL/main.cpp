@@ -87,6 +87,8 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
+
+    // Set 0 to disable vsync.
     glfwSwapInterval(1);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -106,77 +108,93 @@ int main()
     glEnable(GL_DEPTH_TEST);
 
     float vertices[] = {
-        // Position             // Texture coords
-        -0.5f, -0.5f, -0.5f,    0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,    1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,    1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,    1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,    0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,    0.0f, 0.0f,
+        // positions          // normals           // texture coords
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
 
-        -0.5f, -0.5f,  0.5f,    0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,    1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,    1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,    1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,    0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,    0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
 
-        -0.5f,  0.5f,  0.5f,    1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,    1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,    0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,    0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,    0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,    1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 
-         0.5f,  0.5f,  0.5f,    1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,    1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,    0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,    0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,    0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,    1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 
-        -0.5f, -0.5f, -0.5f,    0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,    1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,    1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,    1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,    0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,    0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
 
-        -0.5f,  0.5f, -0.5f,    0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,    1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,    1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,    1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,    0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,    0.0f, 1.0f
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
     };
 
-    unsigned int VBO, VAO;
+    unsigned int VBO, lightObjectVAO;
     glGenBuffers(1, &VBO);
-    glGenVertexArrays(1, &VAO);
+    glGenVertexArrays(1, &lightObjectVAO);
 
-    glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+    glBindVertexArray(lightObjectVAO);
+
     // Position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    // TexCoords
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    // Normal
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    // TextCoord
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
-    Shader simpleShader((wchar_t*)L"../res/shaders/vs.vert", (wchar_t*)L"../res/shaders/fs.frag");
 
-    unsigned int texture1, texture2;
+    unsigned int lightSourceVAO;
+    glGenVertexArrays(1, &lightSourceVAO);
+    glBindVertexArray(lightSourceVAO);
+
+    // Bind to match the patter.
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    // Light source VAO.
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    Shader lightObjectShader((wchar_t*)L"../res/shaders/lightObject.vert", (wchar_t*)L"../res/shaders/lightObject.frag");
+    Shader lightSourceShader((wchar_t*)L"../res/shaders/lightSource.vert", (wchar_t*)L"../res/shaders/lightSource.frag");
+
+    unsigned int diffuseTexture, specularTexture;
     int width, height, channels;
 
     stbi_set_flip_vertically_on_load(true);
-    unsigned char* data = stbi_load("../res/container.jpg", &width, &height, &channels, NULL);
+    unsigned char* data = stbi_load("../res/container2.png", &width, &height, &channels, 3);
 
-    glGenTextures(1, &texture1);
+    glGenTextures(1, &diffuseTexture);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture1);
+    glBindTexture(GL_TEXTURE_2D, diffuseTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -186,25 +204,23 @@ int main()
 
     stbi_image_free(data);
 
-    data = stbi_load("../res/awesomeface.png", &width, &height, &channels, NULL);
+    data = stbi_load("../res/container2_specular.png", &width, &height, &channels, 3);
 
-    glGenTextures(1, &texture2);
-    glBindTexture(GL_TEXTURE_2D, texture2);
+    glGenTextures(1, &specularTexture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, specularTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     stbi_image_free(data);
 
-    simpleShader.Use();
-    simpleShader.SetInt("texture0", 0);
-    simpleShader.SetInt("texture1", 1);
-
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    lightObjectShader.Use();
+    lightObjectShader.SetInt("material.diffuse", 0);
+    lightObjectShader.SetInt("material.specular", 1);
 
     glm::mat4 view = glm::mat4(1.0f);
     view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
@@ -212,30 +228,54 @@ int main()
     glm::mat4 projection;
     projection = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / (float)windowHeight, 0.01f, 1000.0f);
 
+    glm::vec3 lightSourcePos(1.0f, 1.0f, 1.0f);
+
     while (!glfwWindowShouldClose(window))
     {
         currentFrame = glfwGetTime();
 
         processInput(window);
 
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
+        glBindTexture(GL_TEXTURE_2D, diffuseTexture);
+
+        glm::mat4 viewProjectionMatrix = projection * camera.GetViewMatrix();
+
+        // Render light object.
+        glm::mat4 model = glm::mat4(1.0f);
+
+        lightObjectShader.Use();
+        lightObjectShader.SetVec3("light.position", lightSourcePos);
+        lightObjectShader.SetVec3("viewPos", camera.Position);
+
+        lightObjectShader.SetVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+        lightObjectShader.SetVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+        lightObjectShader.SetVec3("light.specular", 1.0f, 1.0f, 1.0f);
+
+        lightObjectShader.SetFloat("material.shininess", 64.0f);
+
+        lightObjectShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        lightObjectShader.SetMat4("model", model);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, diffuseTexture);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
+        glBindTexture(GL_TEXTURE_2D, specularTexture);
 
-        simpleShader.Use();
-
-        model = glm::rotate(model, (float)deltaTime, glm::vec3(0.5f, 1.0f, 0.0f));
-
-        glm::mat4 mvpMatrix = projection * camera.GetViewMatrix() * model;
-        simpleShader.SetMat4("mvpMatrix", mvpMatrix);
-
-        glBindVertexArray(VAO);
+        glBindVertexArray(lightObjectVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
+
+        // Render light source.
+        lightSourceShader.Use();
+        model = glm::translate(model, lightSourcePos);
+        model = glm::scale(model, glm::vec3(0.2f));
+        lightSourceShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
+
+        glBindVertexArray(lightSourceVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;

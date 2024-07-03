@@ -64,44 +64,54 @@ public:
     }
 
     // Utility uniform functions
-    void SetBool(char* name, bool value)
+    void SetBool(const char* name, bool value)
     {
         glUniform1i(glGetUniformLocation(ID, name), (int)value);
     }
 
-    void SetBool(const char* name, bool value)
-    {
-        SetBool((char*)name, value);
-    }
-
-    void SetInt(char* name, int value)
+    void SetInt(const char* name, int value)
     {
         glUniform1i(glGetUniformLocation(ID, name), value);
     }
 
-    void SetInt(const char* name, int value)
-    {
-        SetInt((char*)name, value);
-    }
-
-    void SetFloat(char* name, float value)
+    void SetFloat(const char* name, float value)
     {
         glUniform1f(glGetUniformLocation(ID, name), value);
     }
 
-    void SetFloat(const char* name, float value)
-    {
-        SetFloat((char*)name, value);
-    }
-
-    void SetMat4(char* name, glm::mat4 mat4)
+    void SetMat4(const char* name, glm::mat4 mat4)
     {
         glUniformMatrix4fv(glGetUniformLocation(ID, name), 1, GL_FALSE, glm::value_ptr(mat4));
     }
 
-    void SetMat4(const char* name, glm::mat4 mat4)
+    void SetVec4(const char* name, glm::vec4 vec4)
     {
-        SetMat4((char*)name, mat4);
+        glUniform4fv(glGetUniformLocation(ID, name), 1, &vec4[0]);
+    }
+
+    void SetVec4(const char* name, float x, float y, float z, float w)
+    {
+        glUniform4f(glGetUniformLocation(ID, name), x, y, z, w);
+    }
+
+    void SetVec3(const char* name, glm::vec3 vec3)
+    {
+        glUniform3fv(glGetUniformLocation(ID, name), 1, &vec3[0]);
+    }
+
+    void SetVec3(const char* name, float x, float y, float z)
+    {
+        glUniform3f(glGetUniformLocation(ID, name), x, y, z);
+    }
+
+    void SetVec2(const char* name, glm::vec2 vec2)
+    {
+        glUniform2fv(glGetUniformLocation(ID, name), 1, &vec2[0]);
+    }
+
+    void SetVec2(const char* name, float x, float y)
+    {
+        glUniform2f(glGetUniformLocation(ID, name), x, y);
     }
 
 private:
@@ -130,7 +140,7 @@ private:
 
                     default:
                     {
-                        wprintf(L"ERROR unexpected shader type");
+                        wprintf(L"ERROR unexpected shader type\n");
                     }
                 }
             }
