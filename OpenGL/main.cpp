@@ -20,7 +20,7 @@ const int windowHeight = 720;
 double deltaTime = 0.0, lastFrame = 0.0, currentFrame = 0.0;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 1.0f, 3.0f));
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
@@ -222,13 +222,10 @@ int main()
     lightObjectShader.SetInt("material.diffuse", 0);
     lightObjectShader.SetInt("material.specular", 1);
 
-    glm::mat4 view = glm::mat4(1.0f);
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-
     glm::mat4 projection;
     projection = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / (float)windowHeight, 0.01f, 1000.0f);
 
-    glm::vec3 lightSourcePos(1.0f, 1.0f, 1.0f);
+    glm::vec3 lightSourcePos(1.0f, 1.0f, 4.0f);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -251,14 +248,20 @@ int main()
         lightObjectShader.SetVec3("light.position", lightSourcePos);
         lightObjectShader.SetVec3("viewPos", camera.Position);
 
-        lightObjectShader.SetVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+        lightObjectShader.SetVec3("light.ambient", 0.1, 0.1f, 0.1f);
         lightObjectShader.SetVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
         lightObjectShader.SetVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
         lightObjectShader.SetFloat("material.shininess", 64.0f);
 
-        lightObjectShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
-        lightObjectShader.SetMat4("model", model);
+        lightObjectShader.SetFloat("light.constant", 1.0f);
+        lightObjectShader.SetFloat("light.linear", 0.09f);
+        lightObjectShader.SetFloat("light.quadratic", 0.032f);
+
+        lightObjectShader.SetVec3("flashlight.position", camera.Position);
+        lightObjectShader.SetVec3("flashlight.direction", camera.Front);
+        lightObjectShader.SetFloat("flashlight.innerCutOff", glm::cos(glm::radians(12.5f)));
+        lightObjectShader.SetFloat("flashlight.outerCutOff", glm::cos(glm::radians(17.5f)));
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseTexture);
@@ -266,10 +269,20 @@ int main()
         glBindTexture(GL_TEXTURE_2D, specularTexture);
 
         glBindVertexArray(lightObjectVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        for (int i = 0; i < 10; i++)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(2.0f * i, 0.0f, 0.0f));
+            lightObjectShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
+            lightObjectShader.SetMat4("model", model);
+
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         // Render light source.
         lightSourceShader.Use();
+        model = glm::mat4(1.0f);
         model = glm::translate(model, lightSourcePos);
         model = glm::scale(model, glm::vec3(0.2f));
         lightSourceShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
