@@ -221,6 +221,7 @@ int main()
     lightObjectShader.Use();
     lightObjectShader.SetInt("material.diffuse", 0);
     lightObjectShader.SetInt("material.specular", 1);
+    lightObjectShader.SetFloat("material.shininess", 64.0f);
 
     glm::mat4 projection;
     projection = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / (float)windowHeight, 0.01f, 1000.0f);
@@ -245,23 +246,43 @@ int main()
         glm::mat4 model = glm::mat4(1.0f);
 
         lightObjectShader.Use();
-        lightObjectShader.SetVec3("light.position", lightSourcePos);
         lightObjectShader.SetVec3("viewPos", camera.Position);
 
-        lightObjectShader.SetVec3("light.ambient", 0.1, 0.1f, 0.1f);
-        lightObjectShader.SetVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-        lightObjectShader.SetVec3("light.specular", 1.0f, 1.0f, 1.0f);
+        // Directional light.
+        lightObjectShader.SetVec3("directionalLight.direction", -0.2f, -1.0f, -0.3f);
+        lightObjectShader.SetVec3("directionalLight.ambient", 0.05f, 0.05f, 0.05f);
+        lightObjectShader.SetVec3("directionalLight.diffuse", 0.4f, 0.4f, 0.4f);
+        lightObjectShader.SetVec3("directionalLight.specular", 0.5f, 0.5f, 0.5f);
 
-        lightObjectShader.SetFloat("material.shininess", 64.0f);
+        // Point light.
 
-        lightObjectShader.SetFloat("light.constant", 1.0f);
-        lightObjectShader.SetFloat("light.linear", 0.09f);
-        lightObjectShader.SetFloat("light.quadratic", 0.032f);
+        lightObjectShader.SetVec3("pointLight.position", lightSourcePos);
 
-        lightObjectShader.SetVec3("flashlight.position", camera.Position);
-        lightObjectShader.SetVec3("flashlight.direction", camera.Front);
-        lightObjectShader.SetFloat("flashlight.innerCutOff", glm::cos(glm::radians(12.5f)));
-        lightObjectShader.SetFloat("flashlight.outerCutOff", glm::cos(glm::radians(17.5f)));
+        lightObjectShader.SetVec3("pointLight.ambient", 0.1, 0.1f, 0.1f);
+        lightObjectShader.SetVec3("pointLight.diffuse", 0.5f, 0.5f, 0.5f);
+        lightObjectShader.SetVec3("pointLight.specular", 1.0f, 1.0f, 1.0f);
+
+        lightObjectShader.SetFloat("pointLight.constant", 1.0f);
+        lightObjectShader.SetFloat("pointLight.linear", 0.09f);
+        lightObjectShader.SetFloat("pointLight.quadratic", 0.032f);
+
+        // Spotlight.
+
+        lightObjectShader.SetVec3("spotLight.position", camera.Position);
+        lightObjectShader.SetVec3("spotLight.direction", camera.Front);
+
+        lightObjectShader.SetVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+        lightObjectShader.SetVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+        lightObjectShader.SetVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+
+        lightObjectShader.SetFloat("spotLight.constant", 1.0f);
+        lightObjectShader.SetFloat("spotLight.linear", 0.09f);
+        lightObjectShader.SetFloat("spotLight.quadratic", 0.032f);
+
+        lightObjectShader.SetFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
+        lightObjectShader.SetFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+
+        // Activate texture.
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseTexture);
