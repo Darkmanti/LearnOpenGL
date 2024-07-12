@@ -16,5 +16,6 @@
 #define Gigabytes(value) (Megabytes(value)*1024LL)
 #define Terabytes(value) (Gigabytes(value)*1024LL)
 
+#include "stb_image.h"
 #include "glad.c"
 #include "main.cpp"

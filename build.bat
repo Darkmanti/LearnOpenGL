@@ -13,8 +13,9 @@ set glfwPath="%cd%\shared\vendors\glfw"
 set gladPath="%cd%\shared\vendors\glad"
 set stbPath="%cd%\shared\vendors\stb"
 set glmPath="%cd%\shared\vendors\glm"
+set vendorsPath="%cd%\shared\vendors"
 
-set IncludesPath=/I%SharedFilesPath% /I%glfwPath% /I%gladPath% /I%stbPath% /I%glmPath%
+set IncludesPath=/I%SharedFilesPath% /I%glfwPath% /I%gladPath% /I%stbPath% /I%glmPath% /I%vendorsPath%
 
 REM setting build directory
 set BuildDir=build\
@@ -23,7 +24,7 @@ set BuildDirDe=%BuildDir%debug\
 
 REM libs
 set L_AddLib=user32.lib gdi32.lib shell32.lib vcruntime.lib msvcrt.lib "%glfwPath%\glfw3.lib"
-set L_AddDll=%L_RES_FilePath%
+set L_AddDll="%vendorsPath%\assimp\assimp-vc143-mt.lib"
 
 REM Launcher keys
 set L_ReKeys=/permissive- /nologo %IncludesPath% /FC /Oi /GR- /GL /MT /EHa /W4 /Zc:wchar_t /wd4100 /wd4189 /wd4201 /O2 /Fe%L_NameExe%

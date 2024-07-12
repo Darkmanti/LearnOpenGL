@@ -8,7 +8,7 @@
 #include "shader.h"
 #include "camera.h"
 
-#include "stb_image.h"
+#include "model.h"
 
 #include "glm.hpp"
 #include "gtc/matrix_transform.hpp"
@@ -36,13 +36,13 @@ void processInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, true);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
+        camera.ProcessKeyboard(FORWARD, (float)deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
+        camera.ProcessKeyboard(BACKWARD, (float)deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
+        camera.ProcessKeyboard(LEFT, (float)deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
+        camera.ProcessKeyboard(RIGHT, (float)deltaTime);
 }
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
@@ -228,13 +228,20 @@ int main()
 
     glm::vec3 lightSourcePos(1.0f, 1.0f, 4.0f);
 
+    // Setup model.
+    Shader modelLoadingShader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag");
+    Model backpackModel("../res/models/backpack/backpack.obj");
+
+    // Draw in wireframe mode.
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
     while (!glfwWindowShouldClose(window))
     {
         currentFrame = glfwGetTime();
 
         processInput(window);
 
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
@@ -258,7 +265,7 @@ int main()
 
         lightObjectShader.SetVec3("pointLight.position", lightSourcePos);
 
-        lightObjectShader.SetVec3("pointLight.ambient", 0.1, 0.1f, 0.1f);
+        lightObjectShader.SetVec3("pointLight.ambient", 0.1f, 0.1f, 0.1f);
         lightObjectShader.SetVec3("pointLight.diffuse", 0.5f, 0.5f, 0.5f);
         lightObjectShader.SetVec3("pointLight.specular", 1.0f, 1.0f, 1.0f);
 
@@ -310,6 +317,15 @@ int main()
 
         glBindVertexArray(lightSourceVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Render model.
+        modelLoadingShader.Use();
+
+        // render the loaded model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(4.0f, 0.0f, 0.0f));
+        modelLoadingShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        backpackModel.Draw(modelLoadingShader);
 
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
