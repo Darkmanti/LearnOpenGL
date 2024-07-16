@@ -10,6 +10,6 @@ uniform mat4 mvpMatrix;
 
 void main()
 {
-    TexCoords = aTexCoords;    
+    TexCoords = inTexCoords;
     gl_Position = mvpMatrix * vec4(inPosition, 1.0);
 }

@@ -323,7 +323,7 @@ int main()
 
         // render the loaded model
         model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(4.0f, 0.0f, 0.0f));
+        model = glm::translate(model, glm::vec3(4.0f, 0.0f, -5.0f));
         modelLoadingShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
         backpackModel.Draw(modelLoadingShader);
 

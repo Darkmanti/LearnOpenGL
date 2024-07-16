@@ -23,8 +23,8 @@ set BuildDirRe=%BuildDir%release\
 set BuildDirDe=%BuildDir%debug\
 
 REM libs
-set L_AddLib=user32.lib gdi32.lib shell32.lib vcruntime.lib msvcrt.lib "%glfwPath%\glfw3.lib"
-set L_AddDll="%vendorsPath%\assimp\assimp-vc143-mt.lib"
+set L_DebugAddLib=user32.lib gdi32.lib shell32.lib "%glfwPath%\debug_glfw3.lib" "%vendorsPath%\assimp\lib\assimp-vc143-mtd.lib"
+set L_ReleaseAddLib=user32.lib gdi32.lib shell32.lib "%glfwPath%\release_glfw3.lib" "%vendorsPath%\assimp\lib\assimp-vc143-mt.lib"
 
 REM Launcher keys
 set L_ReKeys=/permissive- /nologo %IncludesPath% /FC /Oi /GR- /GL /MT /EHa /W4 /Zc:wchar_t /wd4100 /wd4189 /wd4201 /O2 /Fe%L_NameExe%
@@ -56,13 +56,13 @@ goto Exit
 
 :Release
 pushd %BuildDirRe%
-cl %L_ReDef% %L_ReKeys% %L_FilePath% %L_ReLinkKeys% %L_AddLib% %L_AddDll%
+cl %L_ReDef% %L_ReKeys% %L_FilePath% %L_ReLinkKeys% %L_ReleaseAddLib%
 popd
 exit /b
 
 :Debug
 pushd %BuildDirDe%
-cl %L_DeDef% %L_DeKeys% %L_FilePath% %L_DeLinkKeys% %L_AddLib% %L_AddDll%
+cl %L_DeDef% %L_DeKeys% %L_FilePath% %L_DeLinkKeys% %L_DebugAddLib%
 popd
 exit /b
 
