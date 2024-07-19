@@ -106,6 +106,7 @@ int main()
 
     glViewport(0, 0, windowWidth, windowHeight);
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
 
     float vertices[] = {
         // positions          // normals           // texture coords
