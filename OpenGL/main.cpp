@@ -112,7 +112,23 @@ int main()
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
 
-    float vertices[] = {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    float transparentVertices[] =
+    {
+        // Positions.        // Texture coords.
+        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+        0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+        1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+    };
+
+    float vertices[] =
+    {
         // positions          // normals           // texture coords
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
          0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
@@ -157,6 +173,30 @@ int main()
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
     };
 
+    // Grass.
+
+    unsigned int grassVBO, grassVAO;
+    glGenBuffers(1, &grassVBO);
+    glGenVertexArrays(1, &grassVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, grassVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+
+    glBindVertexArray(grassVAO);
+
+    // Position
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // TextCoord
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
+
+    Shader transparentGrassShader((wchar_t*)L"../res/shaders/transparentGrass.vert", (wchar_t*)L"../res/shaders/transparentGrass.frag");
+
+    // Light objects.
+
     unsigned int VBO, lightObjectVAO;
     glGenBuffers(1, &VBO);
     glGenVertexArrays(1, &lightObjectVAO);
@@ -176,6 +216,7 @@ int main()
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
+    // Light source.
 
     unsigned int lightSourceVAO;
     glGenVertexArrays(1, &lightSourceVAO);
@@ -223,6 +264,28 @@ int main()
 
     stbi_image_free(data);
 
+    unsigned int transparentGrassTexture;
+
+    stbi_set_flip_vertically_on_load(false);
+    data = stbi_load("../res/grass.png", &width, &height, &channels, 4);
+
+    glGenTextures(1, &transparentGrassTexture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, transparentGrassTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
+
+    stbi_set_flip_vertically_on_load(true);
+
+    transparentGrassShader.Use();
+    transparentGrassShader.SetInt("diffuseTexture", 0);
+
     lightObjectShader.Use();
     lightObjectShader.SetInt("material.diffuse", 0);
     lightObjectShader.SetInt("material.specular", 1);
@@ -232,6 +295,14 @@ int main()
     projection = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / (float)windowHeight, 0.01f, 1000.0f);
 
     glm::vec3 lightSourcePos(1.0f, 1.0f, 4.0f);
+
+    // Setup transparent grass.
+    std::vector<glm::vec3> grass;
+    grass.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
+    grass.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
+    grass.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
+    grass.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
+    grass.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
 
     // Setup model.
     Shader modelLoadingShader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag");
@@ -355,6 +426,27 @@ int main()
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
         glEnable(GL_DEPTH_TEST);
+
+        // Render grass.
+        transparentGrassShader.Use();
+        glBindVertexArray(grassVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, transparentGrassTexture);
+
+        std::map<float, glm::vec3> sorted;
+        for (unsigned int i = 0; i < grass.size(); i++)
+        {
+            float distance = glm::length(camera.Position - grass[i]);
+            sorted[distance] = grass[i];
+        }
+
+        for (std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, it->second);
+            transparentGrassShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
 
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;

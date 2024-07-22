@@ -39,8 +39,6 @@ public:
         }
     }
 
-private:
-
     unsigned int TextureFromFile(const char* path, const std::string& directory)
     {
         std::string filename = std::string(path);
@@ -87,6 +85,8 @@ private:
 
         return textureID;
     }
+
+private:
 
     std::vector<Texture> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
     {
