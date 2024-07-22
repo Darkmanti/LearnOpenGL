@@ -108,6 +108,10 @@ int main()
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
+    glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+
     float vertices[] = {
         // positions          // normals           // texture coords
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
@@ -231,6 +235,7 @@ int main()
 
     // Setup model.
     Shader modelLoadingShader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag");
+    Shader outlineShader((wchar_t*)L"../res/shaders/stencil.vert", (wchar_t*)L"../res/shaders/stencil.frag");
     Model backpackModel("../res/models/backpack/backpack.obj");
 
     // Draw in wireframe mode.
@@ -243,7 +248,7 @@ int main()
         processInput(window);
 
         glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseTexture);
@@ -297,6 +302,9 @@ int main()
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, specularTexture);
 
+        // Disable stencil writing.
+        glStencilMask(0x00);
+
         glBindVertexArray(lightObjectVAO);
 
         for (int i = 0; i < 10; i++)
@@ -322,11 +330,31 @@ int main()
         // Render model.
         modelLoadingShader.Use();
 
-        // render the loaded model
+        // Enable stencil test.
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+
+        // Render the loaded model.
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(4.0f, 0.0f, -5.0f));
         modelLoadingShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
         backpackModel.Draw(modelLoadingShader);
+
+        // Disable stencil writing.
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glDisable(GL_DEPTH_TEST);
+
+        outlineShader.Use();
+
+        outlineShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        outlineShader.SetVec4("outlineColor", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+        outlineShader.SetFloat("scale", 0.02f);
+        backpackModel.Draw(outlineShader);
+
+        glStencilMask(0xFF);
+        glStencilFunc(GL_ALWAYS, 0, 0xFF);
+        glEnable(GL_DEPTH_TEST);
 
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
