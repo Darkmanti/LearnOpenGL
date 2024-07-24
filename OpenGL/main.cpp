@@ -30,6 +30,43 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
+Shader* frameBufferShader;
+Shader* transparentGrassShader;
+Shader* modelLoadingShader;
+Shader* outlineShader;
+Shader* lightObjectShader;
+Shader* lightSourceShader;
+
+void RecompileShaders()
+{
+    if (frameBufferShader != NULL)
+        frameBufferShader->~Shader();
+
+    if (transparentGrassShader != NULL)
+        transparentGrassShader->~Shader();
+
+    if (modelLoadingShader != NULL)
+        modelLoadingShader->~Shader();
+
+    if (outlineShader != NULL)
+        outlineShader->~Shader();
+
+    if (lightObjectShader != NULL)
+        lightObjectShader->~Shader();
+
+    if (lightObjectShader != NULL)
+        lightObjectShader->~Shader();
+
+    frameBufferShader = new Shader((wchar_t*)L"../res/shaders/FrameBuffer.vert", (wchar_t*)L"../res/shaders/FrameBuffer.frag");
+    transparentGrassShader = new Shader((wchar_t*)L"../res/shaders/transparentGrass.vert", (wchar_t*)L"../res/shaders/transparentGrass.frag");
+    modelLoadingShader = new Shader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag");
+    outlineShader = new Shader((wchar_t*)L"../res/shaders/stencil.vert", (wchar_t*)L"../res/shaders/stencil.frag");
+    lightObjectShader = new Shader((wchar_t*)L"../res/shaders/lightObject.vert", (wchar_t*)L"../res/shaders/lightObject.frag");
+    lightSourceShader = new Shader((wchar_t*)L"../res/shaders/lightSource.vert", (wchar_t*)L"../res/shaders/lightSource.frag");
+}
+
+bool isShaderButtonReleased = true;
+
 void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -43,6 +80,20 @@ void processInput(GLFWwindow* window)
         camera.ProcessKeyboard(LEFT, (float)deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, (float)deltaTime);
+
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+    {
+        if (isShaderButtonReleased)
+        {
+            isShaderButtonReleased = false;
+            RecompileShaders();
+        }
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_RELEASE)
+    {
+        isShaderButtonReleased = true;
+    }
 }
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
@@ -105,6 +156,49 @@ int main()
     }
 
     glViewport(0, 0, windowWidth, windowHeight);
+
+    // Creating frame buffer.
+    unsigned int frameBuffer;
+    glGenFramebuffers(1, &frameBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+
+    unsigned int frameBufferTexture;
+    glGenTextures(1, &frameBufferTexture);
+    glBindTexture(GL_TEXTURE_2D, frameBufferTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameBufferTexture, 0);
+
+    // Creating depth stencil buffer.
+    unsigned int depthStencilBufferTexture;
+    glGenTextures(1, &depthStencilBufferTexture);
+    glBindTexture(GL_TEXTURE_2D, depthStencilBufferTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, windowWidth, windowHeight, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthStencilBufferTexture, 0);
+
+    // Creating render buffer.
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        wprintf(L"ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
@@ -118,6 +212,18 @@ int main()
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
+
+    float quadVertices[] =
+    {   // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
 
     float transparentVertices[] =
     {
@@ -177,6 +283,20 @@ int main()
         -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f
     };
 
+    RecompileShaders();
+
+    // screen quad VAO
+    unsigned int quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
     // Grass.
 
     unsigned int grassVBO, grassVAO;
@@ -196,8 +316,6 @@ int main()
     glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
-
-    Shader transparentGrassShader((wchar_t*)L"../res/shaders/transparentGrass.vert", (wchar_t*)L"../res/shaders/transparentGrass.frag");
 
     // Light objects.
 
@@ -232,9 +350,6 @@ int main()
     // Light source VAO.
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-
-    Shader lightObjectShader((wchar_t*)L"../res/shaders/lightObject.vert", (wchar_t*)L"../res/shaders/lightObject.frag");
-    Shader lightSourceShader((wchar_t*)L"../res/shaders/lightSource.vert", (wchar_t*)L"../res/shaders/lightSource.frag");
 
     unsigned int diffuseTexture, specularTexture;
     int width, height, channels;
@@ -287,14 +402,6 @@ int main()
 
     stbi_set_flip_vertically_on_load(true);
 
-    transparentGrassShader.Use();
-    transparentGrassShader.SetInt("diffuseTexture", 0);
-
-    lightObjectShader.Use();
-    lightObjectShader.SetInt("material.diffuse", 0);
-    lightObjectShader.SetInt("material.specular", 1);
-    lightObjectShader.SetFloat("material.shininess", 64.0f);
-
     glm::mat4 projection;
     projection = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / (float)windowHeight, 0.01f, 1000.0f);
 
@@ -309,8 +416,6 @@ int main()
     grass.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
 
     // Setup model.
-    Shader modelLoadingShader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag");
-    Shader outlineShader((wchar_t*)L"../res/shaders/stencil.vert", (wchar_t*)L"../res/shaders/stencil.frag");
     Model backpackModel("../res/models/backpack/backpack.obj");
 
     // Draw in wireframe mode.
@@ -322,6 +427,9 @@ int main()
 
         processInput(window);
 
+        glEnable(GL_DEPTH_TEST);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
         glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -333,42 +441,46 @@ int main()
         // Render light object.
         glm::mat4 model = glm::mat4(1.0f);
 
-        lightObjectShader.Use();
-        lightObjectShader.SetVec3("viewPos", camera.Position);
+        lightObjectShader->Use();
+        lightObjectShader->SetInt("material.diffuse", 0);
+        lightObjectShader->SetInt("material.specular", 1);
+        lightObjectShader->SetFloat("material.shininess", 64.0f);
+
+        lightObjectShader->SetVec3("viewPos", camera.Position);
 
         // Directional light.
-        lightObjectShader.SetVec3("directionalLight.direction", -0.2f, -1.0f, -0.3f);
-        lightObjectShader.SetVec3("directionalLight.ambient", 0.05f, 0.05f, 0.05f);
-        lightObjectShader.SetVec3("directionalLight.diffuse", 0.4f, 0.4f, 0.4f);
-        lightObjectShader.SetVec3("directionalLight.specular", 0.5f, 0.5f, 0.5f);
+        lightObjectShader->SetVec3("directionalLight.direction", -0.2f, -1.0f, -0.3f);
+        lightObjectShader->SetVec3("directionalLight.ambient", 0.05f, 0.05f, 0.05f);
+        lightObjectShader->SetVec3("directionalLight.diffuse", 0.4f, 0.4f, 0.4f);
+        lightObjectShader->SetVec3("directionalLight.specular", 0.5f, 0.5f, 0.5f);
 
         // Point light.
 
-        lightObjectShader.SetVec3("pointLight.position", lightSourcePos);
+        lightObjectShader->SetVec3("pointLight.position", lightSourcePos);
 
-        lightObjectShader.SetVec3("pointLight.ambient", 0.1f, 0.1f, 0.1f);
-        lightObjectShader.SetVec3("pointLight.diffuse", 0.5f, 0.5f, 0.5f);
-        lightObjectShader.SetVec3("pointLight.specular", 1.0f, 1.0f, 1.0f);
+        lightObjectShader->SetVec3("pointLight.ambient", 0.1f, 0.1f, 0.1f);
+        lightObjectShader->SetVec3("pointLight.diffuse", 0.5f, 0.5f, 0.5f);
+        lightObjectShader->SetVec3("pointLight.specular", 1.0f, 1.0f, 1.0f);
 
-        lightObjectShader.SetFloat("pointLight.constant", 1.0f);
-        lightObjectShader.SetFloat("pointLight.linear", 0.09f);
-        lightObjectShader.SetFloat("pointLight.quadratic", 0.032f);
+        lightObjectShader->SetFloat("pointLight.constant", 1.0f);
+        lightObjectShader->SetFloat("pointLight.linear", 0.09f);
+        lightObjectShader->SetFloat("pointLight.quadratic", 0.032f);
 
         // Spotlight.
 
-        lightObjectShader.SetVec3("spotLight.position", camera.Position);
-        lightObjectShader.SetVec3("spotLight.direction", camera.Front);
+        lightObjectShader->SetVec3("spotLight.position", camera.Position);
+        lightObjectShader->SetVec3("spotLight.direction", camera.Front);
 
-        lightObjectShader.SetVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-        lightObjectShader.SetVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-        lightObjectShader.SetVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+        lightObjectShader->SetVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+        lightObjectShader->SetVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+        lightObjectShader->SetVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
 
-        lightObjectShader.SetFloat("spotLight.constant", 1.0f);
-        lightObjectShader.SetFloat("spotLight.linear", 0.09f);
-        lightObjectShader.SetFloat("spotLight.quadratic", 0.032f);
+        lightObjectShader->SetFloat("spotLight.constant", 1.0f);
+        lightObjectShader->SetFloat("spotLight.linear", 0.09f);
+        lightObjectShader->SetFloat("spotLight.quadratic", 0.032f);
 
-        lightObjectShader.SetFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
-        lightObjectShader.SetFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+        lightObjectShader->SetFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
+        lightObjectShader->SetFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
 
         // Activate texture.
 
@@ -386,24 +498,24 @@ int main()
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(2.0f * i, 0.0f, 0.0f));
-            lightObjectShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
-            lightObjectShader.SetMat4("model", model);
+            lightObjectShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
+            lightObjectShader->SetMat4("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
         // Render light source.
-        lightSourceShader.Use();
+        lightSourceShader->Use();
         model = glm::mat4(1.0f);
         model = glm::translate(model, lightSourcePos);
         model = glm::scale(model, glm::vec3(0.2f));
-        lightSourceShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        lightSourceShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
 
         glBindVertexArray(lightSourceVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Render model.
-        modelLoadingShader.Use();
+        modelLoadingShader->Use();
 
         // Enable stencil test.
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
@@ -412,27 +524,29 @@ int main()
         // Render the loaded model.
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(4.0f, 0.0f, -5.0f));
-        modelLoadingShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
-        backpackModel.Draw(modelLoadingShader);
+        modelLoadingShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        backpackModel.Draw(*modelLoadingShader);
 
         // Disable stencil writing.
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
         glDisable(GL_DEPTH_TEST);
 
-        outlineShader.Use();
+        outlineShader->Use();
 
-        outlineShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
-        outlineShader.SetVec4("outlineColor", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-        outlineShader.SetFloat("scale", 0.02f);
-        backpackModel.Draw(outlineShader);
+        outlineShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        outlineShader->SetVec4("outlineColor", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+        outlineShader->SetFloat("scale", 0.02f);
+        backpackModel.Draw(*outlineShader);
 
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
         glEnable(GL_DEPTH_TEST);
 
         // Render grass.
-        transparentGrassShader.Use();
+        transparentGrassShader->Use();
+        transparentGrassShader->SetInt("diffuseTexture", 0);
+
         glBindVertexArray(grassVAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, transparentGrassTexture);
@@ -448,9 +562,20 @@ int main()
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, it->second);
-            transparentGrassShader.SetMat4("mvpMatrix", viewProjectionMatrix * model);
+            transparentGrassShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
+
+        // Second pass.
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        frameBufferShader->Use();
+        glBindVertexArray(quadVAO);
+        glDisable(GL_DEPTH_TEST);
+        glBindTexture(GL_TEXTURE_2D, frameBufferTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;

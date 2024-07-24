@@ -27,9 +27,6 @@ public:
         char* vsShaderCode= (char*)Win32ReadFileToBuffer(vertexPath, NULL, NULL, false);
         char* fsShaderCode = (char*)Win32ReadFileToBuffer(fragmentPath, NULL, NULL, false);
 
-        // 2. compile shaders
-        unsigned int vertex, fragment;
-
         // vertex shader
         vertex = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vertex, 1, &vsShaderCode, NULL);
@@ -61,6 +58,12 @@ public:
     void Use()
     {
         glUseProgram(ID);
+    }
+
+    // Destructor.
+    ~Shader()
+    {
+        glDeleteProgram(ID);
     }
 
     // Utility uniform functions
@@ -115,6 +118,8 @@ public:
     }
 
 private:
+
+    unsigned int vertex, fragment;
 
     void CheckCompileErrors(unsigned int shader, ShaderType type)
     {
