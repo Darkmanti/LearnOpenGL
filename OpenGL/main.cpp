@@ -36,6 +36,8 @@ Shader* modelLoadingShader;
 Shader* outlineShader;
 Shader* lightObjectShader;
 Shader* lightSourceShader;
+Shader* skyboxShader;
+Shader* reflectedObjectShader;
 
 void RecompileShaders()
 {
@@ -57,12 +59,20 @@ void RecompileShaders()
     if (lightObjectShader != NULL)
         lightObjectShader->~Shader();
 
-    frameBufferShader = new Shader((wchar_t*)L"../res/shaders/FrameBuffer.vert", (wchar_t*)L"../res/shaders/FrameBuffer.frag");
+    if (skyboxShader != NULL)
+        skyboxShader->~Shader();
+
+    if (reflectedObjectShader != NULL)
+        reflectedObjectShader->~Shader();
+
+    frameBufferShader = new Shader((wchar_t*)L"../res/shaders/frameBuffer.vert", (wchar_t*)L"../res/shaders/frameBuffer.frag");
     transparentGrassShader = new Shader((wchar_t*)L"../res/shaders/transparentGrass.vert", (wchar_t*)L"../res/shaders/transparentGrass.frag");
     modelLoadingShader = new Shader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag");
     outlineShader = new Shader((wchar_t*)L"../res/shaders/stencil.vert", (wchar_t*)L"../res/shaders/stencil.frag");
     lightObjectShader = new Shader((wchar_t*)L"../res/shaders/lightObject.vert", (wchar_t*)L"../res/shaders/lightObject.frag");
     lightSourceShader = new Shader((wchar_t*)L"../res/shaders/lightSource.vert", (wchar_t*)L"../res/shaders/lightSource.frag");
+    skyboxShader = new Shader((wchar_t*)L"../res/shaders/skybox.vert", (wchar_t*)L"../res/shaders/skybox.frag");
+    reflectedObjectShader = new Shader((wchar_t*)L"../res/shaders/reflectedObject.vert", (wchar_t*)L"../res/shaders/reflectedObject.frag");
 }
 
 bool isShaderButtonReleased = true;
@@ -120,6 +130,42 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+unsigned int LoadCubemap(std::vector<std::string> faces)
+{
+    stbi_set_flip_vertically_on_load(false);
+
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++)
+    {
+        unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+            );
+            stbi_image_free(data);
+        }
+        else
+        {
+            wprintf(L"Cubemap texture failed to load at path: %S \n", faces[i].c_str());
+            stbi_image_free(data);
+        }
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    stbi_set_flip_vertically_on_load(true);
+
+    return textureID;
 }
 
 int main()
@@ -283,9 +329,65 @@ int main()
         -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f
     };
 
+    float skyboxVertices[] =
+    {
+        // Positions.
+        -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f
+    };
+
     RecompileShaders();
 
-    // screen quad VAO
+    // Skybox VAO.
+    unsigned int skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    // Screen quad VAO.
     unsigned int quadVAO, quadVBO;
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
@@ -401,6 +503,18 @@ int main()
     stbi_image_free(data);
 
     stbi_set_flip_vertically_on_load(true);
+
+    std::vector<std::string> faces
+    {
+        "../res/skybox/right.jpg",
+        "../res/skybox/left.jpg",
+        "../res/skybox/top.jpg",
+        "../res/skybox/bottom.jpg",
+        "../res/skybox/front.jpg",
+        "../res/skybox/back.jpg"
+    };
+
+    unsigned int skyboxTexture = LoadCubemap(faces);
 
     glm::mat4 projection;
     projection = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / (float)windowHeight, 0.01f, 1000.0f);
@@ -542,6 +656,33 @@ int main()
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
         glEnable(GL_DEPTH_TEST);
+
+        // Render reflected object.
+        reflectedObjectShader->Use();
+        reflectedObjectShader->SetInt("skybox", 0);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 2.0f, 0.0f));
+        reflectedObjectShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        reflectedObjectShader->SetMat4("model", model);
+        reflectedObjectShader->SetVec3("viewPos", camera.Position);
+
+        glBindVertexArray(lightObjectVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Render skybox.
+        glDepthFunc(GL_LEQUAL);
+        skyboxShader->Use();
+        skyboxShader->SetInt("skybox", 0);
+        skyboxShader->SetMat4("view", glm::mat4(glm::mat3(camera.GetViewMatrix())));
+        skyboxShader->SetMat4("projection", projection);
+
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS);
 
         // Render grass.
         transparentGrassShader->Use();
