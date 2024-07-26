@@ -40,6 +40,8 @@ Shader* skyboxShader;
 Shader* reflectedObjectShader;
 Shader* geometryTestShader;
 Shader* modelNormalsShader;
+Shader* modelLoadingDefaultShader;
+Shader* modelLoadingInstancedShader;
 
 void RecompileShaders()
 {
@@ -73,6 +75,12 @@ void RecompileShaders()
     if (modelNormalsShader != NULL)
         modelNormalsShader->~Shader();
 
+    if (modelLoadingDefaultShader != NULL)
+        modelLoadingDefaultShader->~Shader();
+
+    if (modelLoadingInstancedShader != NULL)
+        modelLoadingInstancedShader->~Shader();
+
     frameBufferShader = new Shader((wchar_t*)L"../res/shaders/frameBuffer.vert", (wchar_t*)L"../res/shaders/frameBuffer.frag");
     transparentGrassShader = new Shader((wchar_t*)L"../res/shaders/transparentGrass.vert", (wchar_t*)L"../res/shaders/transparentGrass.frag");
     modelLoadingShader = new Shader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag", (wchar_t*)L"../res/shaders/modelLoading.geom");
@@ -83,6 +91,8 @@ void RecompileShaders()
     skyboxShader = new Shader((wchar_t*)L"../res/shaders/skybox.vert", (wchar_t*)L"../res/shaders/skybox.frag");
     reflectedObjectShader = new Shader((wchar_t*)L"../res/shaders/reflectedObject.vert", (wchar_t*)L"../res/shaders/reflectedObject.frag");
     geometryTestShader = new Shader((wchar_t*)L"../res/shaders/geometryTest.vert", (wchar_t*)L"../res/shaders/geometryTest.frag", (wchar_t*)L"../res/shaders/geometryTest.geom");
+    modelLoadingDefaultShader = new Shader((wchar_t*)L"../res/shaders/modelLoadingDefault.vert", (wchar_t*)L"../res/shaders/modelLoadingDefault.frag");
+    modelLoadingInstancedShader = new Shader((wchar_t*)L"../res/shaders/modelLoadingInstanced.vert", (wchar_t*)L"../res/shaders/modelLoadingInstanced.frag");
 }
 
 bool isShaderButtonReleased = true;
@@ -196,7 +206,7 @@ int main()
     glfwMakeContextCurrent(window);
 
     // Set 0 to disable vsync.
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -559,8 +569,66 @@ int main()
     grass.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
     grass.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
 
-    // Setup model.
+    // Setup models.
     Model backpackModel("../res/models/backpack/backpack.obj");
+
+    Model planetModel("../res/models/planet/planet.obj");
+    Model rockModel("../res/models/rock/rock.obj");
+
+    glm::vec3 planetCenter = glm::vec3(glm::vec3(20.0f, 0.0f, -30.0f));
+
+    int amount = 10000;
+    glm::mat4* modelMatrices;
+    modelMatrices = new glm::mat4[amount];
+
+    float phi = glm::pi<float>() * (sqrt(5.0f) * 1.0f);
+    float magnitude = 15.0f;
+
+    for (int i = 0; i < amount; i++)
+    {
+        float y = (1.0f - (i / (float)(amount - 1.0f)) * 2.0f);
+        float radius = sqrt(1 - y * y);
+
+        y *= magnitude;
+
+        float theta = phi * i;
+
+        float x = ((cos(theta) * radius) * magnitude) + planetCenter.x;
+        float z = ((sin(theta) * radius) * magnitude) + planetCenter.z;
+
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(x, y, z));
+        model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
+
+        modelMatrices[i] = model;
+    }
+
+    unsigned int buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
+
+    for (unsigned int i = 0; i < rockModel.Meshes.size(); i++)
+    {
+        unsigned int VAO = rockModel.Meshes[i].VAO;
+        glBindVertexArray(VAO);
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+
+        glBindVertexArray(0);
+    }
 
     // Draw in wireframe mode.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -673,7 +741,7 @@ int main()
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Render model.
-        modelLoadingShader->Use();
+        modelLoadingDefaultShader->Use();
 
         // Enable stencil test.
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
@@ -682,9 +750,8 @@ int main()
         // Render the loaded model.
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(4.0f, 0.0f, -5.0f));
-        modelLoadingShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
-        modelLoadingShader->SetFloat("time", (3.0f * glm::pi<float>()) / 2.0f);
-        backpackModel.Draw(*modelLoadingShader);
+        modelLoadingDefaultShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        backpackModel.Draw(*modelLoadingDefaultShader);
 
         // Render outline.
         // Disable stencil writing.
@@ -726,6 +793,30 @@ int main()
         modelNormalsShader->SetMat4("projection", projection);
         modelNormalsShader->SetMat4("view", camera.GetViewMatrix());
         backpackModel.Draw(*modelNormalsShader);
+
+        // Render instanced models.
+        modelLoadingDefaultShader->Use();
+
+        // Draw planet.
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, planetCenter);
+        model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
+        modelLoadingDefaultShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        planetModel.Draw(*modelLoadingDefaultShader);
+
+        // Draw meteorites.
+        modelLoadingInstancedShader->Use();
+        modelLoadingInstancedShader->SetInt("texture_diffuse1", 0);
+        modelLoadingInstancedShader->SetMat4("view", camera.GetViewMatrix());
+        modelLoadingInstancedShader->SetMat4("projection", projection);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, rockModel.LoadedTextures[0].id);
+        for (int i = 0; i < rockModel.Meshes.size(); i++)
+        {
+            glBindVertexArray(rockModel.Meshes[i].VAO);
+            glDrawElementsInstanced(GL_TRIANGLES, (unsigned int)(rockModel.Meshes[i].indices.size()), GL_UNSIGNED_INT, 0, amount);
+            glBindVertexArray(0);
+        }
 
         // Render reflected object.
         reflectedObjectShader->Use();
@@ -783,7 +874,14 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        //wprintf(L"FPS: %.f      frame time: %f\n", 1000 / (deltaTime * 1000), deltaTime);
+        double fps = 1000 / (deltaTime * 1000);
+        double frameTime = deltaTime;
+
+        char title[256];
+        memset(title, 0, 256);
+        snprintf(title, 256, "FPS: %.f   frame time: %f\n", 1000 / (deltaTime * 1000), deltaTime);
+
+        glfwSetWindowTitle(window, title);
 
         glfwPollEvents();
         glfwSwapBuffers(window);
