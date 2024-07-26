@@ -38,6 +38,8 @@ Shader* lightObjectShader;
 Shader* lightSourceShader;
 Shader* skyboxShader;
 Shader* reflectedObjectShader;
+Shader* geometryTestShader;
+Shader* modelNormalsShader;
 
 void RecompileShaders()
 {
@@ -65,14 +67,22 @@ void RecompileShaders()
     if (reflectedObjectShader != NULL)
         reflectedObjectShader->~Shader();
 
+    if (geometryTestShader != NULL)
+        geometryTestShader->~Shader();
+
+    if (modelNormalsShader != NULL)
+        modelNormalsShader->~Shader();
+
     frameBufferShader = new Shader((wchar_t*)L"../res/shaders/frameBuffer.vert", (wchar_t*)L"../res/shaders/frameBuffer.frag");
     transparentGrassShader = new Shader((wchar_t*)L"../res/shaders/transparentGrass.vert", (wchar_t*)L"../res/shaders/transparentGrass.frag");
-    modelLoadingShader = new Shader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag");
+    modelLoadingShader = new Shader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag", (wchar_t*)L"../res/shaders/modelLoading.geom");
+    modelNormalsShader = new Shader((wchar_t*)L"../res/shaders/modelNormals.vert", (wchar_t*)L"../res/shaders/modelNormals.frag", (wchar_t*)L"../res/shaders/modelNormals.geom");
     outlineShader = new Shader((wchar_t*)L"../res/shaders/stencil.vert", (wchar_t*)L"../res/shaders/stencil.frag");
     lightObjectShader = new Shader((wchar_t*)L"../res/shaders/lightObject.vert", (wchar_t*)L"../res/shaders/lightObject.frag");
     lightSourceShader = new Shader((wchar_t*)L"../res/shaders/lightSource.vert", (wchar_t*)L"../res/shaders/lightSource.frag");
     skyboxShader = new Shader((wchar_t*)L"../res/shaders/skybox.vert", (wchar_t*)L"../res/shaders/skybox.frag");
     reflectedObjectShader = new Shader((wchar_t*)L"../res/shaders/reflectedObject.vert", (wchar_t*)L"../res/shaders/reflectedObject.frag");
+    geometryTestShader = new Shader((wchar_t*)L"../res/shaders/geometryTest.vert", (wchar_t*)L"../res/shaders/geometryTest.frag", (wchar_t*)L"../res/shaders/geometryTest.geom");
 }
 
 bool isShaderButtonReleased = true;
@@ -255,9 +265,9 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
+    //glEnable(GL_CULL_FACE);
+    //glCullFace(GL_BACK);
+    //glFrontFace(GL_CCW);
 
     float quadVertices[] =
     {   // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
@@ -375,7 +385,27 @@ int main()
          1.0f, -1.0f,  1.0f
     };
 
+    float points[] =
+    {
+        -0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // top-left
+         0.5f,  0.5f, 0.0f, 1.0f, 0.0f, // top-right
+         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // bottom-right
+        -0.5f, -0.5f, 1.0f, 1.0f, 0.0f  // bottom-left
+    };
+
     RecompileShaders();
+
+    // Points VAO.
+    unsigned int pointsVAO, pointsVBO;
+    glGenVertexArrays(1, &pointsVAO);
+    glGenBuffers(1, &pointsVBO);
+    glBindVertexArray(pointsVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(points), &points, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
 
     // Skybox VAO.
     unsigned int skyboxVAO, skyboxVBO;
@@ -552,6 +582,20 @@ int main()
 
         glm::mat4 viewProjectionMatrix = projection * camera.GetViewMatrix();
 
+        // Render skybox.
+        glDepthFunc(GL_LEQUAL);
+        skyboxShader->Use();
+        skyboxShader->SetInt("skybox", 0);
+        skyboxShader->SetMat4("view", glm::mat4(glm::mat3(camera.GetViewMatrix())));
+        skyboxShader->SetMat4("projection", projection);
+
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS);
+
         // Render light object.
         glm::mat4 model = glm::mat4(1.0f);
 
@@ -639,8 +683,10 @@ int main()
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(4.0f, 0.0f, -5.0f));
         modelLoadingShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        modelLoadingShader->SetFloat("time", (3.0f * glm::pi<float>()) / 2.0f);
         backpackModel.Draw(*modelLoadingShader);
 
+        // Render outline.
         // Disable stencil writing.
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
@@ -657,6 +703,30 @@ int main()
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
         glEnable(GL_DEPTH_TEST);
 
+        // Render model with explode.
+        modelLoadingShader->Use();
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-4.0f, 0.0f, -5.0f));
+        modelLoadingShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        modelLoadingShader->SetFloat("time", (float)glfwGetTime());
+        backpackModel.Draw(*modelLoadingShader);
+
+        // Render model with normals.
+        modelLoadingShader->Use();
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(12.0f, 0.0f, -5.0f));
+        modelLoadingShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
+        modelLoadingShader->SetFloat("time", (3.0f * glm::pi<float>()) / 2.0f);
+        backpackModel.Draw(*modelLoadingShader);
+
+        modelNormalsShader->Use();
+
+        modelNormalsShader->SetMat4("model", model);
+        modelNormalsShader->SetMat4("projection", projection);
+        modelNormalsShader->SetMat4("view", camera.GetViewMatrix());
+        backpackModel.Draw(*modelNormalsShader);
+
         // Render reflected object.
         reflectedObjectShader->Use();
         reflectedObjectShader->SetInt("skybox", 0);
@@ -669,20 +739,6 @@ int main()
 
         glBindVertexArray(lightObjectVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        // Render skybox.
-        glDepthFunc(GL_LEQUAL);
-        skyboxShader->Use();
-        skyboxShader->SetInt("skybox", 0);
-        skyboxShader->SetMat4("view", glm::mat4(glm::mat3(camera.GetViewMatrix())));
-        skyboxShader->SetMat4("projection", projection);
-
-        glBindVertexArray(skyboxVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-        glDepthFunc(GL_LESS);
 
         // Render grass.
         transparentGrassShader->Use();
@@ -707,6 +763,12 @@ int main()
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
 
+        // Render points.
+        // geometryTestShader->Use();
+        // glBindVertexArray(pointsVAO);
+        // glDrawArrays(GL_POINTS, 0, 4);
+        // glBindVertexArray(0);
+
         // Second pass.
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -721,7 +783,7 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        wprintf(L"FPS: %.f      frame time: %f\n", 1000 / (deltaTime * 1000), deltaTime);
+        //wprintf(L"FPS: %.f      frame time: %f\n", 1000 / (deltaTime * 1000), deltaTime);
 
         glfwPollEvents();
         glfwSwapBuffers(window);

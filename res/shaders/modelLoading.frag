@@ -2,11 +2,14 @@
 
 out vec4 result;
 
-in vec2 TexCoords;
+in GS_OUT
+{
+    vec2 TexCoords;
+} gs_out;
 
 uniform sampler2D texture_diffuse1;
 
 void main()
 {
-    result = texture(texture_diffuse1, TexCoords);
+    result = texture(texture_diffuse1, gs_out.TexCoords);
 }

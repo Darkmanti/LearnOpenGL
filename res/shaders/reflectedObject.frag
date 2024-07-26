@@ -2,9 +2,12 @@
 
 out vec4 result;
 
-in vec3 VertexPosition;
-in vec3 Normal;
-in vec2 TexCoord;
+in VertexData
+{
+    vec3 VertexPosition;
+    vec3 Normal;
+    vec2 TexCoord;
+} inVertexData;
 
 uniform samplerCube skybox;
 
@@ -29,10 +32,10 @@ vec3 CalculateEnvironmentRefraction(vec3 cameraPosition, vec3 vertexPosition, ve
 
 void main()
 {
-    vec3 normal = normalize(Normal);
+    vec3 normal = normalize(inVertexData.Normal);
 
-    vec3 reflection = CalculateEnvironmentReflection(viewPos, VertexPosition, normal);
-    vec3 refraction = CalculateEnvironmentRefraction(viewPos, VertexPosition, normal);
+    vec3 reflection = CalculateEnvironmentReflection(viewPos, inVertexData.VertexPosition, normal);
+    vec3 refraction = CalculateEnvironmentRefraction(viewPos, inVertexData.VertexPosition, normal);
 
     // Result.
     result = vec4(refraction, 1.0);

@@ -11,6 +11,7 @@ enum ShaderType
 {
     VertexShader = 0,
     FragmentShader,
+    GeometryShader,
     ProgramShader
 };
 
@@ -22,10 +23,23 @@ public:
     unsigned int ID;
 
     // Constructor
-    Shader(wchar_t* vertexPath, wchar_t* fragmentPath)
+    Shader(wchar_t* vertexPath, wchar_t* fragmentPath, wchar_t* geometryPath = NULL)
     {
         char* vsShaderCode= (char*)Win32ReadFileToBuffer(vertexPath, NULL, NULL, false);
         char* fsShaderCode = (char*)Win32ReadFileToBuffer(fragmentPath, NULL, NULL, false);
+
+        if (geometryPath != NULL)
+        {
+            char* gsShaderCode = (char*)Win32ReadFileToBuffer(geometryPath, NULL, NULL, false);
+
+            // geometry Shader
+            geometry = glCreateShader(GL_GEOMETRY_SHADER);
+            glShaderSource(geometry, 1, &gsShaderCode, NULL);
+            glCompileShader(geometry);
+            CheckCompileErrors(geometry, GeometryShader);
+
+            free(gsShaderCode);
+        }
 
         // vertex shader
         vertex = glCreateShader(GL_VERTEX_SHADER);
@@ -43,12 +57,19 @@ public:
         ID = glCreateProgram();
         glAttachShader(ID, vertex);
         glAttachShader(ID, fragment);
+
+        if (geometryPath != NULL)
+            glAttachShader(ID, geometry);
+
         glLinkProgram(ID);
         CheckCompileErrors(ID, ProgramShader);
 
         // delete the shaders as they're linked into our program now and no longer necessary
         glDeleteShader(vertex);
         glDeleteShader(fragment);
+
+        if (geometryPath != NULL)
+            glDeleteShader(geometry);
 
         free(vsShaderCode);
         free(fsShaderCode);
@@ -119,7 +140,7 @@ public:
 
 private:
 
-    unsigned int vertex, fragment;
+    unsigned int vertex, fragment, geometry;
 
     void CheckCompileErrors(unsigned int shader, ShaderType type)
     {
@@ -141,6 +162,11 @@ private:
                     case FragmentShader:
                     {
                         wprintf(L"ERROR Fragment Shader compilation:\n    %hs \n", infoLog);
+                    } break;
+
+                    case GeometryShader:
+                    {
+                        wprintf(L"ERROR Geometry Shader compilation:\n    %hs \n", infoLog);
                     } break;
 
                     default:
