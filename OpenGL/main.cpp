@@ -17,6 +17,8 @@
 const int windowWidth = 1280;
 const int windowHeight = 720;
 
+const int MSAASamples = 4;
+
 double deltaTime = 0.0, lastFrame = 0.0, currentFrame = 0.0;
 
 // camera
@@ -194,7 +196,6 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
@@ -206,7 +207,7 @@ int main()
     glfwMakeContextCurrent(window);
 
     // Set 0 to disable vsync.
-    glfwSwapInterval(0);
+    glfwSwapInterval(1);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -223,47 +224,54 @@ int main()
 
     glViewport(0, 0, windowWidth, windowHeight);
 
-    // Creating frame buffer.
+    // Creating MSAA frameBuffer.
     unsigned int frameBuffer;
     glGenFramebuffers(1, &frameBuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
-    unsigned int frameBufferTexture;
-    glGenTextures(1, &frameBufferTexture);
-    glBindTexture(GL_TEXTURE_2D, frameBufferTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    // Create a multisampled color attachment texture.
+    unsigned int textureColorBufferMultiSampled;
+    glGenTextures(1, &textureColorBufferMultiSampled);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, MSAASamples, GL_RGB, windowWidth, windowHeight, GL_TRUE);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled, 0);
 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameBufferTexture, 0);
-
-    // Creating depth stencil buffer.
-    unsigned int depthStencilBufferTexture;
-    glGenTextures(1, &depthStencilBufferTexture);
-    glBindTexture(GL_TEXTURE_2D, depthStencilBufferTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, windowWidth, windowHeight, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthStencilBufferTexture, 0);
-
-    // Creating render buffer.
+    // Create a renderbuffer object for depth and stencil attachments.
     unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, MSAASamples, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
         wprintf(L"ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n");
     }
-
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Create second post-processing framebuffer.
+    unsigned int intermediateFBO;
+    glGenFramebuffers(1, &intermediateFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, intermediateFBO);
+
+    // Create a color attachment texture.
+    unsigned int screenTexture;
+    glGenTextures(1, &screenTexture);
+    glBindTexture(GL_TEXTURE_2D, screenTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        wprintf(L"ERROR::FRAMEBUFFER:: Intermediate is not complete!\n");
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glEnable(GL_MULTISAMPLE);
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -641,6 +649,7 @@ int main()
 
         glEnable(GL_DEPTH_TEST);
 
+        // Draw scene in a normal frame buffer.
         glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
         glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -860,15 +869,23 @@ int main()
         // glDrawArrays(GL_POINTS, 0, 4);
         // glBindVertexArray(0);
 
-        // Second pass.
+        // 1. Blit multisampled buffers to normal colorbuffer of intermediate FBO. Image is stored in screenTexture.
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuffer);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
+        glBlitFramebuffer(0, 0, windowWidth, windowHeight, 0, 0, windowWidth, windowHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+        // 2. Render quad with scene's visuals as its texture image.
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        frameBufferShader->Use();
-        glBindVertexArray(quadVAO);
         glDisable(GL_DEPTH_TEST);
-        glBindTexture(GL_TEXTURE_2D, frameBufferTexture);
+
+        // 3. Draw Screen quad.
+        frameBufferShader->Use();
+        frameBufferShader->SetInt("screenTexture", 0);
+        glBindVertexArray(quadVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, screenTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         deltaTime = currentFrame - lastFrame;
