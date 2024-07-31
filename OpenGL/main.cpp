@@ -98,6 +98,9 @@ void RecompileShaders()
 }
 
 bool isShaderButtonReleased = true;
+bool isEButtonReleased = true;
+
+bool blinn = false;
 
 void processInput(GLFWwindow* window)
 {
@@ -125,6 +128,20 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_RELEASE)
     {
         isShaderButtonReleased = true;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+    {
+        if (isEButtonReleased)
+        {
+            isEButtonReleased = false;
+            blinn = !blinn;
+        }
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE)
+    {
+        isEButtonReleased = true;
     }
 }
 
@@ -424,6 +441,7 @@ int main()
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
+    glBindVertexArray(0);
 
     // Skybox VAO.
     unsigned int skyboxVAO, skyboxVBO;
@@ -434,6 +452,7 @@ int main()
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glBindVertexArray(0);
 
     // Screen quad VAO.
     unsigned int quadVAO, quadVBO;
@@ -446,9 +465,9 @@ int main()
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glBindVertexArray(0);
 
     // Grass.
-
     unsigned int grassVBO, grassVAO;
     glGenBuffers(1, &grassVBO);
     glGenVertexArrays(1, &grassVAO);
@@ -585,7 +604,7 @@ int main()
 
     glm::vec3 planetCenter = glm::vec3(glm::vec3(20.0f, 0.0f, -30.0f));
 
-    int amount = 10000;
+    int amount = 1000;
     glm::mat4* modelMatrices;
     modelMatrices = new glm::mat4[amount];
 
@@ -680,6 +699,7 @@ int main()
         lightObjectShader->SetInt("material.diffuse", 0);
         lightObjectShader->SetInt("material.specular", 1);
         lightObjectShader->SetFloat("material.shininess", 64.0f);
+        lightObjectShader->SetBool("blinn", blinn);
 
         lightObjectShader->SetVec3("viewPos", camera.Position);
 
