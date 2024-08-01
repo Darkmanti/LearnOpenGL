@@ -33,31 +33,19 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 Shader* frameBufferShader;
-Shader* transparentGrassShader;
 Shader* modelLoadingShader;
-Shader* outlineShader;
 Shader* lightObjectShader;
 Shader* lightSourceShader;
 Shader* skyboxShader;
 Shader* reflectedObjectShader;
-Shader* geometryTestShader;
-Shader* modelNormalsShader;
-Shader* modelLoadingDefaultShader;
-Shader* modelLoadingInstancedShader;
 
 void RecompileShaders()
 {
     if (frameBufferShader != NULL)
         frameBufferShader->~Shader();
 
-    if (transparentGrassShader != NULL)
-        transparentGrassShader->~Shader();
-
     if (modelLoadingShader != NULL)
         modelLoadingShader->~Shader();
-
-    if (outlineShader != NULL)
-        outlineShader->~Shader();
 
     if (lightObjectShader != NULL)
         lightObjectShader->~Shader();
@@ -71,36 +59,15 @@ void RecompileShaders()
     if (reflectedObjectShader != NULL)
         reflectedObjectShader->~Shader();
 
-    if (geometryTestShader != NULL)
-        geometryTestShader->~Shader();
-
-    if (modelNormalsShader != NULL)
-        modelNormalsShader->~Shader();
-
-    if (modelLoadingDefaultShader != NULL)
-        modelLoadingDefaultShader->~Shader();
-
-    if (modelLoadingInstancedShader != NULL)
-        modelLoadingInstancedShader->~Shader();
-
     frameBufferShader = new Shader((wchar_t*)L"../res/shaders/frameBuffer.vert", (wchar_t*)L"../res/shaders/frameBuffer.frag");
-    transparentGrassShader = new Shader((wchar_t*)L"../res/shaders/transparentGrass.vert", (wchar_t*)L"../res/shaders/transparentGrass.frag");
-    modelLoadingShader = new Shader((wchar_t*)L"../res/shaders/modelLoading.vert", (wchar_t*)L"../res/shaders/modelLoading.frag", (wchar_t*)L"../res/shaders/modelLoading.geom");
-    modelNormalsShader = new Shader((wchar_t*)L"../res/shaders/modelNormals.vert", (wchar_t*)L"../res/shaders/modelNormals.frag", (wchar_t*)L"../res/shaders/modelNormals.geom");
-    outlineShader = new Shader((wchar_t*)L"../res/shaders/stencil.vert", (wchar_t*)L"../res/shaders/stencil.frag");
+    modelLoadingShader = new Shader((wchar_t*)L"../res/shaders/modelLoadingDefault.vert", (wchar_t*)L"../res/shaders/modelLoadingDefault.frag");
     lightObjectShader = new Shader((wchar_t*)L"../res/shaders/lightObject.vert", (wchar_t*)L"../res/shaders/lightObject.frag");
     lightSourceShader = new Shader((wchar_t*)L"../res/shaders/lightSource.vert", (wchar_t*)L"../res/shaders/lightSource.frag");
     skyboxShader = new Shader((wchar_t*)L"../res/shaders/skybox.vert", (wchar_t*)L"../res/shaders/skybox.frag");
     reflectedObjectShader = new Shader((wchar_t*)L"../res/shaders/reflectedObject.vert", (wchar_t*)L"../res/shaders/reflectedObject.frag");
-    geometryTestShader = new Shader((wchar_t*)L"../res/shaders/geometryTest.vert", (wchar_t*)L"../res/shaders/geometryTest.frag", (wchar_t*)L"../res/shaders/geometryTest.geom");
-    modelLoadingDefaultShader = new Shader((wchar_t*)L"../res/shaders/modelLoadingDefault.vert", (wchar_t*)L"../res/shaders/modelLoadingDefault.frag");
-    modelLoadingInstancedShader = new Shader((wchar_t*)L"../res/shaders/modelLoadingInstanced.vert", (wchar_t*)L"../res/shaders/modelLoadingInstanced.frag");
 }
 
 bool isShaderButtonReleased = true;
-bool isEButtonReleased = true;
-
-bool blinn = false;
 
 void processInput(GLFWwindow* window)
 {
@@ -128,20 +95,6 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_RELEASE)
     {
         isShaderButtonReleased = true;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-    {
-        if (isEButtonReleased)
-        {
-            isEButtonReleased = false;
-            blinn = !blinn;
-        }
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE)
-    {
-        isEButtonReleased = true;
     }
 }
 
@@ -316,18 +269,6 @@ int main()
          1.0f,  1.0f,  1.0f, 1.0f
     };
 
-    float transparentVertices[] =
-    {
-        // Positions.        // Texture coords.
-        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-        0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
-        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-
-        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-        1.0f,  0.5f,  0.0f,  1.0f,  0.0f
-    };
-
     float cubeVertices[] =
     {
         // positions          // normals           // texture coords
@@ -420,28 +361,7 @@ int main()
          1.0f, -1.0f,  1.0f
     };
 
-    float points[] =
-    {
-        -0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // top-left
-         0.5f,  0.5f, 0.0f, 1.0f, 0.0f, // top-right
-         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // bottom-right
-        -0.5f, -0.5f, 1.0f, 1.0f, 0.0f  // bottom-left
-    };
-
     RecompileShaders();
-
-    // Points VAO.
-    unsigned int pointsVAO, pointsVBO;
-    glGenVertexArrays(1, &pointsVAO);
-    glGenBuffers(1, &pointsVBO);
-    glBindVertexArray(pointsVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(points), &points, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
-    glBindVertexArray(0);
 
     // Skybox VAO.
     unsigned int skyboxVAO, skyboxVBO;
@@ -465,25 +385,6 @@ int main()
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glBindVertexArray(0);
-
-    // Grass.
-    unsigned int grassVBO, grassVAO;
-    glGenBuffers(1, &grassVBO);
-    glGenVertexArrays(1, &grassVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, grassVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
-
-    glBindVertexArray(grassVAO);
-
-    // Position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // TextCoord
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
     glBindVertexArray(0);
 
     // Light objects.
@@ -552,25 +453,6 @@ int main()
 
     stbi_image_free(data);
 
-    unsigned int transparentGrassTexture;
-
-    stbi_set_flip_vertically_on_load(false);
-    data = stbi_load("../res/grass.png", &width, &height, &channels, 4);
-
-    glGenTextures(1, &transparentGrassTexture);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, transparentGrassTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    stbi_image_free(data);
-
-    stbi_set_flip_vertically_on_load(true);
-
     std::vector<std::string> faces
     {
         "../res/skybox/right.jpg",
@@ -588,74 +470,11 @@ int main()
 
     glm::vec3 lightSourcePos(1.0f, 1.0f, 4.0f);
 
-    // Setup transparent grass.
-    std::vector<glm::vec3> grass;
-    grass.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
-    grass.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
-    grass.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
-    grass.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
-    grass.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
-
     // Setup models.
     Model backpackModel("../res/models/backpack/backpack.obj");
 
     Model planetModel("../res/models/planet/planet.obj");
     Model rockModel("../res/models/rock/rock.obj");
-
-    glm::vec3 planetCenter = glm::vec3(glm::vec3(20.0f, 0.0f, -30.0f));
-
-    int amount = 1000;
-    glm::mat4* modelMatrices;
-    modelMatrices = new glm::mat4[amount];
-
-    float phi = glm::pi<float>() * (sqrt(5.0f) * 1.0f);
-    float magnitude = 15.0f;
-
-    for (int i = 0; i < amount; i++)
-    {
-        float y = (1.0f - (i / (float)(amount - 1.0f)) * 2.0f);
-        float radius = sqrt(1 - y * y);
-
-        y *= magnitude;
-
-        float theta = phi * i;
-
-        float x = ((cos(theta) * radius) * magnitude) + planetCenter.x;
-        float z = ((sin(theta) * radius) * magnitude) + planetCenter.z;
-
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(x, y, z));
-        model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
-
-        modelMatrices[i] = model;
-    }
-
-    unsigned int buffer;
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
-
-    for (unsigned int i = 0; i < rockModel.Meshes.size(); i++)
-    {
-        unsigned int VAO = rockModel.Meshes[i].VAO;
-        glBindVertexArray(VAO);
-
-        glEnableVertexAttribArray(3);
-        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
-        glEnableVertexAttribArray(4);
-        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
-        glEnableVertexAttribArray(5);
-        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
-        glEnableVertexAttribArray(6);
-        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
-
-        glVertexAttribDivisor(3, 1);
-        glVertexAttribDivisor(4, 1);
-        glVertexAttribDivisor(5, 1);
-        glVertexAttribDivisor(6, 1);
-
-        glBindVertexArray(0);
-    }
 
     // Draw in wireframe mode.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -699,7 +518,6 @@ int main()
         lightObjectShader->SetInt("material.diffuse", 0);
         lightObjectShader->SetInt("material.specular", 1);
         lightObjectShader->SetFloat("material.shininess", 64.0f);
-        lightObjectShader->SetBool("blinn", blinn);
 
         lightObjectShader->SetVec3("viewPos", camera.Position);
 
@@ -746,6 +564,7 @@ int main()
 
         // Disable stencil writing.
         glStencilMask(0x00);
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
 
         glBindVertexArray(lightObjectVAO);
 
@@ -770,82 +589,13 @@ int main()
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Render model.
-        modelLoadingDefaultShader->Use();
-
-        // Enable stencil test.
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glStencilMask(0xFF);
+        modelLoadingShader->Use();
 
         // Render the loaded model.
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(4.0f, 0.0f, -5.0f));
-        modelLoadingDefaultShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
-        backpackModel.Draw(*modelLoadingDefaultShader);
-
-        // Render outline.
-        // Disable stencil writing.
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-        glStencilMask(0x00);
-        glDisable(GL_DEPTH_TEST);
-
-        outlineShader->Use();
-
-        outlineShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
-        outlineShader->SetVec4("outlineColor", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-        outlineShader->SetFloat("scale", 0.02f);
-        backpackModel.Draw(*outlineShader);
-
-        glStencilMask(0xFF);
-        glStencilFunc(GL_ALWAYS, 0, 0xFF);
-        glEnable(GL_DEPTH_TEST);
-
-        // Render model with explode.
-        modelLoadingShader->Use();
-
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-4.0f, 0.0f, -5.0f));
         modelLoadingShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
-        modelLoadingShader->SetFloat("time", (float)glfwGetTime());
         backpackModel.Draw(*modelLoadingShader);
-
-        // Render model with normals.
-        modelLoadingShader->Use();
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(12.0f, 0.0f, -5.0f));
-        modelLoadingShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
-        modelLoadingShader->SetFloat("time", (3.0f * glm::pi<float>()) / 2.0f);
-        backpackModel.Draw(*modelLoadingShader);
-
-        modelNormalsShader->Use();
-
-        modelNormalsShader->SetMat4("model", model);
-        modelNormalsShader->SetMat4("projection", projection);
-        modelNormalsShader->SetMat4("view", camera.GetViewMatrix());
-        backpackModel.Draw(*modelNormalsShader);
-
-        // Render instanced models.
-        modelLoadingDefaultShader->Use();
-
-        // Draw planet.
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, planetCenter);
-        model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-        modelLoadingDefaultShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
-        planetModel.Draw(*modelLoadingDefaultShader);
-
-        // Draw meteorites.
-        modelLoadingInstancedShader->Use();
-        modelLoadingInstancedShader->SetInt("texture_diffuse1", 0);
-        modelLoadingInstancedShader->SetMat4("view", camera.GetViewMatrix());
-        modelLoadingInstancedShader->SetMat4("projection", projection);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, rockModel.LoadedTextures[0].id);
-        for (int i = 0; i < rockModel.Meshes.size(); i++)
-        {
-            glBindVertexArray(rockModel.Meshes[i].VAO);
-            glDrawElementsInstanced(GL_TRIANGLES, (unsigned int)(rockModel.Meshes[i].indices.size()), GL_UNSIGNED_INT, 0, amount);
-            glBindVertexArray(0);
-        }
 
         // Render reflected object.
         reflectedObjectShader->Use();
@@ -859,35 +609,6 @@ int main()
 
         glBindVertexArray(lightObjectVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        // Render grass.
-        transparentGrassShader->Use();
-        transparentGrassShader->SetInt("diffuseTexture", 0);
-
-        glBindVertexArray(grassVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, transparentGrassTexture);
-
-        std::map<float, glm::vec3> sorted;
-        for (unsigned int i = 0; i < grass.size(); i++)
-        {
-            float distance = glm::length(camera.Position - grass[i]);
-            sorted[distance] = grass[i];
-        }
-
-        for (std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
-        {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, it->second);
-            transparentGrassShader->SetMat4("mvpMatrix", viewProjectionMatrix * model);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-        }
-
-        // Render points.
-        // geometryTestShader->Use();
-        // glBindVertexArray(pointsVAO);
-        // glDrawArrays(GL_POINTS, 0, 4);
-        // glBindVertexArray(0);
 
         // 1. Blit multisampled buffers to normal colorbuffer of intermediate FBO. Image is stored in screenTexture.
         glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuffer);
