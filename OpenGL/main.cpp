@@ -38,29 +38,24 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-Shader* bloomShader;
+Shader* geometryPassShader;
+Shader* lightPassShader;
 Shader* lightBoxShader;
-Shader* blurShader;
-Shader* bloomFinalShader;
 
 void RecompileShaders()
 {
-    if (bloomShader != NULL)
-        bloomShader->~Shader();
+    if (geometryPassShader != NULL)
+        geometryPassShader->~Shader();
+
+    if (lightPassShader != NULL)
+        lightPassShader->~Shader();
 
     if (lightBoxShader != NULL)
         lightBoxShader->~Shader();
 
-    if (blurShader != NULL)
-        blurShader->~Shader();
-
-    if (bloomFinalShader != NULL)
-        bloomFinalShader->~Shader();
-
-    bloomShader = new Shader((wchar_t*)L"../res/shaders/bloom.vert", (wchar_t*)L"../res/shaders/bloom.frag");
+    geometryPassShader = new Shader((wchar_t*)L"../res/shaders/gBuffer.vert", (wchar_t*)L"../res/shaders/gBuffer.frag");
+    lightPassShader = new Shader((wchar_t*)L"../res/shaders/deferredRendering.vert", (wchar_t*)L"../res/shaders/deferredRendering.frag");
     lightBoxShader = new Shader((wchar_t*)L"../res/shaders/lightBox.vert", (wchar_t*)L"../res/shaders/lightBox.frag");
-    blurShader = new Shader((wchar_t*)L"../res/shaders/blur.vert", (wchar_t*)L"../res/shaders/blur.frag");
-    bloomFinalShader = new Shader((wchar_t*)L"../res/shaders/bloomFinalStage.vert", (wchar_t*)L"../res/shaders/bloomFinalStage.frag");
 }
 
 bool isShaderButtonReleased = true;
@@ -176,34 +171,47 @@ int main()
 
     RecompileShaders();
 
-    // configure (floating point) framebuffers
-    // ---------------------------------------
-    unsigned int hdrFBO;
-    glGenFramebuffers(1, &hdrFBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-    // create 2 floating point color buffers (1 for normal rendering, other for brightness threshold values)
-    unsigned int colorBuffers[2];
-    glGenTextures(2, colorBuffers);
-    for (unsigned int i = 0; i < 2; i++)
-    {
-        glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WindowWidth, WindowHeight, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);  // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        // attach texture to framebuffer
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
-    }
+    // configure g-buffer framebuffer
+    // ------------------------------
+    unsigned int gBuffer;
+    glGenFramebuffers(1, &gBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+    unsigned int gPosition, gNormal, gAlbedoSpec;
+
+    // position color buffer
+    glGenTextures(1, &gPosition);
+    glBindTexture(GL_TEXTURE_2D, gPosition);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WindowWidth, WindowHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+
+    // normal color buffer
+    glGenTextures(1, &gNormal);
+    glBindTexture(GL_TEXTURE_2D, gNormal);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WindowWidth, WindowHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+
+    // color + specular color buffer
+    glGenTextures(1, &gAlbedoSpec);
+    glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WindowWidth, WindowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
+
+    // tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
+    unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+    glDrawBuffers(3, attachments);
+
     // create and attach depth buffer (renderbuffer)
     unsigned int rboDepth;
     glGenRenderbuffers(1, &rboDepth);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WindowWidth, WindowHeight);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
-    // tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
-    unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-    glDrawBuffers(2, attachments);
 
     // finally check if framebuffer is complete
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -213,48 +221,38 @@ int main()
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // ping-pong-framebuffer for blurring
-    unsigned int pingpongFBO[2];
-    unsigned int pingpongColorbuffers[2];
-    glGenFramebuffers(2, pingpongFBO);
-    glGenTextures(2, pingpongColorbuffers);
-    for (unsigned int i = 0; i < 2; i++)
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
-        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WindowWidth, WindowHeight, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers[i], 0);
-        // also check if framebuffers are complete (no need for depth buffer)
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        {
-            wprintf(L"Framebuffer not complete!\n");
-        }
-    }
-
     // lighting info
     // -------------
-    // positions
+    const unsigned int NR_LIGHTS = 32;
     std::vector<glm::vec3> lightPositions;
-    lightPositions.push_back(glm::vec3(0.0f, 0.5f, 1.5f));
-    lightPositions.push_back(glm::vec3(-4.0f, 0.5f, -3.0f));
-    lightPositions.push_back(glm::vec3(3.0f, 0.5f, 1.0f));
-    lightPositions.push_back(glm::vec3(-.8f, 2.4f, -1.0f));
-    // colors
     std::vector<glm::vec3> lightColors;
-    lightColors.push_back(glm::vec3(5.0f, 5.0f, 5.0f));
-    lightColors.push_back(glm::vec3(10.0f, 0.0f, 0.0f));
-    lightColors.push_back(glm::vec3(0.0f, 0.0f, 15.0f));
-    lightColors.push_back(glm::vec3(0.0f, 5.0f, 0.0f));
+    srand(13);
+    for (unsigned int i = 0; i < NR_LIGHTS; i++)
+    {
+        // calculate slightly random offsets
+        float xPos = static_cast<float>(((rand() % 100) / 100.0) * 6.0 - 3.0);
+        float yPos = static_cast<float>(((rand() % 100) / 100.0) * 6.0 - 4.0);
+        float zPos = static_cast<float>(((rand() % 100) / 100.0) * 6.0 - 3.0);
+        lightPositions.push_back(glm::vec3(xPos, yPos, zPos));
+        // also calculate random color
+        float rColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.0
+        float gColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.0
+        float bColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.0
+        lightColors.push_back(glm::vec3(rColor, gColor, bColor));
+    }
 
-    int woodTexture = LoadTexture("../res/wood.png", true);
-    int containerTexture = LoadTexture("../res/container2.png", true);
-
-    glm::mat4 projection;
-    projection = glm::perspective(glm::radians(camera.Zoom), (float)WindowWidth / (float)WindowHeight, 0.01f, 1000.0f);
+    stbi_set_flip_vertically_on_load(true);
+    Model backpack(std::string("../res/models/backpack/backpack.obj"));
+    std::vector<glm::vec3> objectPositions;
+    objectPositions.push_back(glm::vec3(-3.0, -0.5, -3.0));
+    objectPositions.push_back(glm::vec3(0.0, -0.5, -3.0));
+    objectPositions.push_back(glm::vec3(3.0, -0.5, -3.0));
+    objectPositions.push_back(glm::vec3(-3.0, -0.5, 0.0));
+    objectPositions.push_back(glm::vec3(0.0, -0.5, 0.0));
+    objectPositions.push_back(glm::vec3(3.0, -0.5, 0.0));
+    objectPositions.push_back(glm::vec3(-3.0, -0.5, 3.0));
+    objectPositions.push_back(glm::vec3(0.0, -0.5, 3.0));
+    objectPositions.push_back(glm::vec3(3.0, -0.5, 3.0));
 
     // Draw in wireframe mode.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -266,33 +264,46 @@ int main()
         processInput(window);
 
         glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WindowWidth / (float)WindowHeight, 0.01f, 1000.0f);
 
         glEnable(GL_DEPTH_TEST);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        bloomShader->Use();
-        bloomShader->SetInt("diffuseTexture", 0);
-        blurShader->Use();
-        blurShader->SetInt("image", 0);
-        bloomFinalShader->Use();
-        bloomFinalShader->SetInt("scene", 0);
-        bloomFinalShader->SetInt("bloomBlur", 1);
-
-        // 1. render scene into floating point framebuffer
-        // -----------------------------------------------
-        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+        // 1. geometry pass: render scene's geometry/color data into gbuffer
+        // -----------------------------------------------------------------
+        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         glm::mat4 model = glm::mat4(1.0f);
-        bloomShader->Use();
-        bloomShader->SetMat4("projection", projection);
-        bloomShader->SetMat4("view", view);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, woodTexture);
+        geometryPassShader->Use();
+        geometryPassShader->SetMat4("projection", projection);
+        geometryPassShader->SetMat4("view", view);
+        for (unsigned int i = 0; i < objectPositions.size(); i++)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, objectPositions[i]);
+            model = glm::scale(model, glm::vec3(0.5f));
+            geometryPassShader->SetMat4("model", model);
+            backpack.Draw(*geometryPassShader);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        // set lighting uniforms
+        // 2. lighting pass: calculate lighting by iterating over a screen filled quad pixel-by-pixel using the gbuffer's content.
+        // -----------------------------------------------------------------------------------------------------------------------
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        lightPassShader->Use();
+        lightPassShader->SetInt("gPosition", 0);
+        lightPassShader->SetInt("gNormal", 1);
+        lightPassShader->SetInt("gAlbedoSpec", 2);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gPosition);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, gNormal);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+
+        // send light relevant uniforms
         for (unsigned int i = 0; i < lightPositions.size(); i++)
         {
             char positionName[256];
@@ -303,100 +314,54 @@ int main()
             memset(colorName, 0, 256);
             snprintf(colorName, 256, "lights[%d].Color", i);
 
-            bloomShader->SetVec3(positionName, lightPositions[i]);
-            bloomShader->SetVec3(colorName, lightColors[i]);
+            char linearName[256];
+            memset(linearName, 0, 256);
+            snprintf(linearName, 256, "lights[%d].Linear", i);
+
+            char attenuationName[256];
+            memset(attenuationName, 0, 256);
+            snprintf(attenuationName, 256, "lights[%d].Quadratic", i);
+
+            lightPassShader->SetVec3(positionName, lightPositions[i]);
+            lightPassShader->SetVec3(colorName, lightColors[i]);
+
+            // update attenuation parameters and calculate radius
+            const float linear = 0.01f;
+            const float quadratic = 1.8f;
+            lightPassShader->SetFloat(linearName, linear);
+            lightPassShader->SetFloat(attenuationName, quadratic);
         }
-        bloomShader->SetVec3("viewPos", camera.Position);
 
-        // create one large cube that acts as the floor
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0));
-        model = glm::scale(model, glm::vec3(12.5f, 0.5f, 12.5f));
-        bloomShader->SetMat4("model", model);
-        RenderCube();
-        // then create multiple cubes as the scenery
-        glBindTexture(GL_TEXTURE_2D, containerTexture);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        bloomShader->SetMat4("model", model);
-        RenderCube();
+        lightPassShader->SetVec3("viewPos", camera.Position);
+        // finally render quad
+        RenderQuad();
 
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        bloomShader->SetMat4("model", model);
-        RenderCube();
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-1.0f, -1.0f, 2.0));
-        model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-        bloomShader->SetMat4("model", model);
-        RenderCube();
+        //// 2.5. copy content of geometry's depth buffer to default framebuffer's depth buffer
+        //// ----------------------------------------------------------------------------------
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
+        //// blit to default framebuffer. Note that this may or may not work as the internal formats of both the FBO and default framebuffer have to match.
+        //// the internal formats are implementation defined. This works on all of my systems, but if it doesn't on yours you'll likely have to write to the
+        //// depth buffer in another shader stage (or somehow see to match the default framebuffer's internal format with the FBO's internal format).
+        glBlitFramebuffer(0, 0, WindowWidth, WindowHeight, 0, 0, WindowWidth, WindowHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 2.7f, 4.0));
-        model = glm::rotate(model, glm::radians(23.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-        model = glm::scale(model, glm::vec3(1.25));
-        bloomShader->SetMat4("model", model);
-        RenderCube();
-
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-2.0f, 1.0f, -3.0));
-        model = glm::rotate(model, glm::radians(124.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-        bloomShader->SetMat4("model", model);
-        RenderCube();
-
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        bloomShader->SetMat4("model", model);
-        RenderCube();
-
-        // finally show all the light sources as bright cubes
+        // 3. render lights on top of scene
+        // --------------------------------
         lightBoxShader->Use();
         lightBoxShader->SetMat4("projection", projection);
         lightBoxShader->SetMat4("view", view);
-
         for (unsigned int i = 0; i < lightPositions.size(); i++)
         {
             model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(lightPositions[i]));
-            model = glm::scale(model, glm::vec3(0.25f));
+            model = glm::translate(model, lightPositions[i]);
+            model = glm::scale(model, glm::vec3(0.125f));
             lightBoxShader->SetMat4("model", model);
             lightBoxShader->SetVec3("lightColor", lightColors[i]);
             RenderCube();
         }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        // 2. blur bright fragments with two-pass Gaussian Blur 
-        // --------------------------------------------------
-        bool horizontal = true, first_iteration = true;
-        unsigned int amount = 10;
-        blurShader->Use();
-        for (unsigned int i = 0; i < amount; i++)
-        {
-            glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
-            blurShader->SetInt("horizontal", horizontal);
-            glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorbuffers[!horizontal]);  // bind texture of other framebuffer (or scene if first iteration)
-            RenderQuad();
-            horizontal = !horizontal;
-            if (first_iteration)
-                first_iteration = false;
-        }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        // 3. now render floating point color buffer to 2D quad and tonemap HDR colors to default framebuffer's (clamped) color range
-        // --------------------------------------------------------------------------------------------------------------------------
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        bloomFinalShader->Use();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]);
-        bloomFinalShader->SetInt("bloom", isSomethingEnable);
-        bloomFinalShader->SetFloat("exposure", exposure);
-        RenderQuad();
 
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -495,7 +460,7 @@ void RenderCube()
 // RenderQuad() renders a 1x1 XY quad in NDC
 // -----------------------------------------
 unsigned int quadVAO = 0;
-unsigned int quadVBO = 0;
+unsigned int quadVBO;
 void RenderQuad()
 {
     if (quadVAO == 0)
