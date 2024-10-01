@@ -22,8 +22,8 @@ void RenderCube();
 void RenderQuad();
 float CustomLerp(float a, float b, float value);
 
-const int WindowWidth = 1920;
-const int WindowHeight = 1080;
+const int WindowWidth = 1280;
+const int WindowHeight = 720;
 
 float exposure = 1.0f;
 
@@ -305,6 +305,9 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     stbi_set_flip_vertically_on_load(true);
+
+    int woodTexture = LoadTexture("../res/wood.png", true);
+
     Model backpack(std::string("../res/models/backpack/backpack.obj"));
     std::vector<glm::vec3> objectPositions;
     objectPositions.push_back(glm::vec3(-3.0, 0.0, -3.0));
@@ -347,11 +350,15 @@ int main()
         geometryPassShader->Use();
         geometryPassShader->SetMat4("projection", projection);
         geometryPassShader->SetMat4("view", view);
+
         // room cube
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0, 7.0f, 0.0f));
         model = glm::scale(model, glm::vec3(7.5f, 7.5f, 7.5f));
         geometryPassShader->SetMat4("model", model);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, woodTexture);
+        geometryPassShader->SetInt("texture_diffuse1", 0);
         geometryPassShader->SetInt("invertedNormals", 1); // invert normals as we're inside the cube
         RenderCube();
         geometryPassShader->SetInt("invertedNormals", 0);
