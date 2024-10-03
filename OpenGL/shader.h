@@ -106,6 +106,11 @@ public:
         glUniform1f(glGetUniformLocation(ID, name), value);
     }
 
+    void SetMat3(const char* name, glm::mat3 mat3)
+    {
+        glUniformMatrix3fv(glGetUniformLocation(ID, name), 1, GL_FALSE, glm::value_ptr(mat3));
+    }
+
     void SetMat4(const char* name, glm::mat4 mat4)
     {
         glUniformMatrix4fv(glGetUniformLocation(ID, name), 1, GL_FALSE, glm::value_ptr(mat4));
